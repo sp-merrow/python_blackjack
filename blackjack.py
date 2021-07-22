@@ -58,12 +58,24 @@ class Hand(list):
         self.append(deck.getRandom())
     
     def __str__(self):
-        fullHand = []
-        for ele in self:
-            fullHand.append(ele.split('\n'))
+        tempAdd = []
+        fullHand = ''
+        for card in self:
+            tempAdd.append(card.__str__()) #add a list within tempAdd to append str onto
+        
+
+        for c, item in enumerate(tempAdd):
+            if c < len(tempAdd):
+                tempAdd[c] = tempAdd[c].replace('\n', '') + tempAdd[c+1]
 
 
+
+        for i in tempAdd:
+            fullHand += ''.join(i)
+            
+        
         return fullHand
+        
 
 
 while True:
@@ -76,6 +88,5 @@ while True:
     
     print('\nUSER')
     print(currentHand)
-    
     
     break
