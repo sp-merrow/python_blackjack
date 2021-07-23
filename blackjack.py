@@ -12,11 +12,14 @@ with open('card_template.txt', 'r', encoding='utf-8') as ct:
 
 
 class Card:
-    def __init__(self, suit, face):
+    def __init__(self, suit, face, isFlipped):
         self.suit = suit
         self.face = face
+        self.isFlipped = isFlipped
     
     def __str__(self):
+        if self.isFlipped:
+            return self.flippedCard()
         fullCard = ''
         for count, line in enumerate(cardTemplate):
             if 'F' in line:
@@ -32,8 +35,22 @@ class Card:
                 fullCard += line
             else:
                 fullCard += '\n' + line
-        
         return fullCard
+    
+    def flippedCard(self):
+        fullCard = ''
+        for count, line in enumerate(cardTemplate):
+            line = line.replace('F', '▒')
+            line = line.replace('S', '▒')
+            line = line.replace(' ', '▒')
+            
+            
+            if count == 0:
+                fullCard += line
+            else:
+                fullCard += '\n' + line
+        return fullCard
+
 
 class Deck(list):
     def shuffle(self):
@@ -41,18 +58,24 @@ class Deck(list):
             for c in d:
                 c = c.replace('\n', '')
                 c = c.split('|')
-                self.append(Card(c[1], c[2]))
+                self.append(Card(c[1], c[2], False))
     
     def getRandom(self):
-        return self.pop(randint(0, len(self)-1))
+        return self.pop(randint(0, (len(self)-1)))
 
 deck = Deck()
 
 
 class Hand(list):
-    def __init__(self):
+    def __init__(self, isDealer):
+        self.isDealer = isDealer
         for i in range(2):
             self.append(deck.getRandom())
+        if self.isDealer:
+            for card in self:
+                card.isFlipped = True
+        else:
+            self[1].isFlipped = True
 
     def hit(self):
         self.append(deck.getRandom())
@@ -75,20 +98,12 @@ class Hand(list):
         return fullHand
         
 
+class Game:
+    def __init__(self):
+        deck.shuffle()
+        self.dealerHand = Hand(True)
+        self.playerHand = Hand(False)
+        
 
-while True:
-    deck.shuffle()
-    currentHand = Hand()
-    dealerHand = Hand()
-
-    print('DEALER')
-    dealerHand.hit()
-    print(dealerHand)
-    
-    print('\nUSER')
-    currentHand.hit()
-    currentHand.hit()
-    currentHand.hit()
-    print(currentHand)
-    
-    break
+g = Game()
+print(g.dealerHand)
