@@ -36,9 +36,6 @@ class Card:
         return fullCard
 
 class Deck(list):
-    def __init__(self):
-        self.cardFaces = ()
-
     def shuffle(self):
         with open('cards.txt', 'r') as d:
             for c in d:
@@ -63,19 +60,17 @@ class Hand(list):
     def __str__(self):
         tempAdd = []
         fullHand = ''
-        for card in self:
-            tempAdd.append(card.__str__()) #add a list within tempAdd to append str onto
-        
-
-        for c, item in enumerate(tempAdd):
-            if c < len(tempAdd):
-                tempAdd[c] = tempAdd[c].replace('\n', '') + tempAdd[c+1]
-
-
-
+        for count, card in enumerate(self):
+            for lineCount, line in enumerate(card.__str__().split('\n')):
+                if count == 0:
+                    tempAdd.append(line + '\n')
+                else:
+                    editLine = tempAdd[lineCount]
+                    editLine = editLine.replace('\n', ' ' + line + '\n')
+                    tempAdd[lineCount] = editLine
+                    
         for i in tempAdd:
             fullHand += ''.join(i)
-            
         
         return fullHand
         
@@ -87,9 +82,13 @@ while True:
     dealerHand = Hand()
 
     print('DEALER')
+    dealerHand.hit()
     print(dealerHand)
     
     print('\nUSER')
+    currentHand.hit()
+    currentHand.hit()
+    currentHand.hit()
     print(currentHand)
     
     break
