@@ -16,6 +16,13 @@ class Card:
         self.suit = suit
         self.face = face
         self.isFlipped = isFlipped
+        if self.face in ('J', 'Q', 'K'):
+            self.points = 10
+        elif self.face == 'A':
+            self.points = 11
+        else:
+            self.points = int(self.face)
+
     
     def __str__(self):
         if self.isFlipped:
@@ -68,17 +75,30 @@ deck = Deck()
 
 class Hand(list):
     def __init__(self, isDealer):
+        self.points = 0
         self.isDealer = isDealer
         for i in range(2):
             self.append(deck.getRandom())
-        if self.isDealer:
-            for card in self:
-                card.isFlipped = True
-        else:
+        if self.isDealer: #if this is the dealer's hand, show only one card face up
             self[1].isFlipped = True
+        for card in self:
+            self.points += card.points
+
+
+    def chkPoints(self):
+        totalPoints = 0
+        for card in self:
+            totalPoints += card.points
+        if totalPoints > 21:
+            aceList = [i for i in self if i.face == 'A']
+            while totalPoints > 21:
+                aceList.points = 1
+
 
     def hit(self):
-        self.append(deck.getRandom())
+        newCard = deck.getRandom()
+        self.points += newCard.points
+        self.append(newCard)
     
     def __str__(self):
         tempAdd = []
@@ -103,7 +123,12 @@ class Game:
         deck.shuffle()
         self.dealerHand = Hand(True)
         self.playerHand = Hand(False)
+    
+    def __str__(self):
+        return "*** Dealer's Hand ***\n" + self.dealerHand.__str__() + '\n\n*** Your Hand ***\n' + self.playerHand.__str__()
+
+
         
 
 g = Game()
-print(g.dealerHand)
+print(g)
