@@ -85,20 +85,30 @@ class Hand(list):
             self.points += card.points
 
 
-    def chkPoints(self):
-        totalPoints = 0
-        for card in self:
-            totalPoints += card.points
-        if totalPoints > 21:
-            aceList = [i for i in self if i.face == 'A']
-            while totalPoints > 21:
-                aceList.points = 1
+    def chkAce(self):
+        aceList = [i for i in self if i.face == 'A']
+        aceList = iter(aceList)
+        while self.points > 21:
+            try:
+                next(aceList).points = 1
+            except StopIteration:
+                break
+
+
+    def chkBreak(self):
+        self.chkAce()
+        if self.points > 21:
+            return True
+        else:
+            return False
+
 
 
     def hit(self):
         newCard = deck.getRandom()
         self.points += newCard.points
         self.append(newCard)
+        self.chkAce()
     
     def __str__(self):
         tempAdd = []
@@ -116,12 +126,41 @@ class Hand(list):
             fullHand += ''.join(i)
         
         return fullHand
+
+
+class Dealer:
+    def __init__(self, dumb):
+        self.hand = Hand(True)
+        self.dumb = dumb
+    
+    def considerAce(self):
+        aceList = [i for i in self if i.face == 'A'] #continue here /////////////////////////////////////////////////////////////////////////
+        if aceList:
+
+
+    
+    def play(self, pHand):
+        if self.dumb == True:
+            if self.hand.points <= 17:
+                self.hand.hit()
+        else:
+            faceUpCard = pHand[0]
+            if faceUpCard.face == 'A' or faceUpCard.points in range(7, 11):
+                if self.points < 17:
+                    self.hand.hit()
+            elif faceUpCard.points in range(4, 7):
+                if self.points < 12:
+                    self.hand.hit()
+            else:
+                if self.points < 13:
+                    self.hand.hit()
         
+
 
 class Game:
     def __init__(self):
         deck.shuffle()
-        self.dealerHand = Hand(True)
+        self.dealer = Dealer()
         self.playerHand = Hand(False)
     
     def __str__(self):
