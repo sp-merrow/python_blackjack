@@ -68,7 +68,7 @@ class Hand(list):
             if c < len(tempAdd):
                 tempAdd[c] = tempAdd[c].replace('\n', '') + tempAdd[c+1]
 
-
+        
 
         for i in tempAdd:
             fullHand += ''.join(i)
