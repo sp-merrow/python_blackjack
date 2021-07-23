@@ -36,6 +36,9 @@ class Card:
         return fullCard
 
 class Deck(list):
+    def __init__(self):
+        self.cardFaces = ()
+
     def shuffle(self):
         with open('cards.txt', 'r') as d:
             for c in d:
@@ -68,7 +71,7 @@ class Hand(list):
             if c < len(tempAdd):
                 tempAdd[c] = tempAdd[c].replace('\n', '') + tempAdd[c+1]
 
-        
+
 
         for i in tempAdd:
             fullHand += ''.join(i)
