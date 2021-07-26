@@ -101,8 +101,6 @@ class Hand(list):
         else:
             return False
 
-
-
     def hit(self):
         newCard = deck.getRandom()
         self.points += newCard.points
@@ -136,8 +134,6 @@ class Dealer:
         aceList = [i for i in self if i.face == 'A']
         if aceList:
 
-
-    
     def play(self, pHand):
         if self.dumb == True:
             if self.hand.points <= 17:
