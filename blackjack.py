@@ -1,4 +1,4 @@
-from random import randint
+from random import betavariate, randint
 import dealer_logic
 
 suitSymbols = {'SPADE':'♠', 'CLUB':'♣', 'DIAMOND':'♦', 'HEART':'♥'}
@@ -74,16 +74,21 @@ deck = Deck()
 
 
 class Hand(list):
-    def __init__(self, isDealer):
+    def __init__(self, isDealer, splitCard):
         self.points = 0
         self.isDealer = isDealer
+        if not splitCard:
+            self.newHand()
+        else:
+            self.append(splitCard)
+
+    def newHand(self):
         for i in range(2):
             self.append(deck.getRandom())
         if self.isDealer: #if this is the dealer's hand, show only one card face up
             self[1].isFlipped = True
         for card in self:
             self.points += card.points
-
 
     def chkAce(self):
         aceList = [i for i in self if i.face == 'A']
@@ -94,10 +99,28 @@ class Hand(list):
             except StopIteration:
                 break
 
-
     def chkBreak(self):
         self.chkAce()
         if self.points > 21:
+            return True
+        else:
+            return False
+
+    def chkDouble(self):
+        if self.points in range(9, 12):
+            return True
+        else:
+            return False
+
+    def chkSplit(self):
+        faces = [i.face for i in self]
+        if faces[0] == faces[1]:
+            return True
+        else:
+            return False
+
+    def chkBlackjack(self):
+        if self.points == 21:
             return True
         else:
             return False
@@ -106,7 +129,6 @@ class Hand(list):
         newCard = deck.getRandom()
         self.points += newCard.points
         self.append(newCard)
-        self.chkAce()
     
     def __str__(self):
         tempAdd = []
@@ -128,7 +150,8 @@ class Hand(list):
 
 class Dealer:
     def __init__(self, dumb):
-        self.hand = Hand(True)
+        self.hand = Hand(True, None)
+        self.cash = 500
         self.dumb = dumb
         self.stratTable = dealer_logic.data
     
@@ -152,16 +175,64 @@ class Dealer:
                 if self.points < 13:
                     self.hand.hit()
         
+class Player:
+    betAmounts = {'1':1.00, '2':2.50, '3':5.00, '4':25.00, '5':50.00, '6':100.00, '7':500.00}
+    def __init__(self):
+        self.hand = Hand(False, None)
+        self.cash = 500
+        self.currentBet = 0
+
+    def split(self, spCard):
+        self.spHand = Hand(False, spCard)
+    
+    def takeInput(self, valids, text):
+        while True:
+            choice = input(f'{text}')
+            if choice not in valids:
+                print('\nInvalid option. Please try again.')
+            else:
+                break
+        return choice
+    
+    def makeBet(self):
+        betAmt = self.takeInput(('1', '2', '3', '4', '5', '6', '7'), '\n*** MAKE BET ***\n\n1. $1.00\n2. $2.50\n3. $5.00\n4. $25.00\n5. $50.00\n6. $100.00\n7. $500.00\n\nEnter choice: ')
+        for k, v in Player.betAmounts.items():
+            if betAmt == k:
+                self.currentBet = v
+
+    def play(self):
+        if self.hand.chkSplit() and self.hand.chkDouble():
+            option = self.takeInput(('1', '2', '3', '4'), '\n1. Hit\n2. Stand\n3. Split\n4. Double Down\n\nEnter choice: ')
+            if option == '1':
+                self.hand.hit()
+            elif option == '2':
+                pass
+            elif option == '3':
+                self.split()
+            else:
+
+        elif self.hand.chkSplit():
+
+        
+        if choice == '1':
+            self.hand.hit()
+        elif choice == '2':
+            pass
+        else:
+            self.split(self.hand[1])
+
 
 
 class Game:
     def __init__(self):
         deck.shuffle()
         self.dealer = Dealer()
-        self.playerHand = Hand(False)
+        self.player = Player()
     
     def __str__(self):
         return "*** Dealer's Hand ***\n" + self.dealerHand.__str__() + '\n\n*** Your Hand ***\n' + self.playerHand.__str__()
+
+
 
 
         
