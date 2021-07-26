@@ -1,4 +1,5 @@
 from random import randint
+import dealer_logic
 
 suitSymbols = {'SPADE':'♠', 'CLUB':'♣', 'DIAMOND':'♦', 'HEART':'♥'}
 cardTemplate = []
@@ -129,6 +130,7 @@ class Dealer:
     def __init__(self, dumb):
         self.hand = Hand(True)
         self.dumb = dumb
+        self.stratTable = dealer_logic.data
     
     def considerAce(self):
         aceList = [i for i in self if i.face == 'A']
