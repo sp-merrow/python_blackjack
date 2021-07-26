@@ -2,7 +2,6 @@ from random import randint
 
 suitSymbols = {'SPADE':'♠', 'CLUB':'♣', 'DIAMOND':'♦', 'HEART':'♥'}
 cardTemplate = []
-cardsInPlay = []
 
 with open('card_template.txt', 'r', encoding='utf-8') as ct:
     for line in ct:
@@ -134,7 +133,7 @@ class Dealer:
         self.dumb = dumb
     
     def considerAce(self):
-        aceList = [i for i in self if i.face == 'A'] #continue here /////////////////////////////////////////////////////////////////////////
+        aceList = [i for i in self if i.face == 'A']
         if aceList:
 
 
