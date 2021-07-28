@@ -132,6 +132,8 @@ class Hand(list):
 
     def hit(self):
         newCard = deck.getRandom()
+        if self.isDealer:
+            newCard.isFlipped = True
         self.points += newCard.points
         self.append(newCard)
     
@@ -242,4 +244,7 @@ class Game:
 
         
 g = Game()
+g.player.hand.hit()
+g.player.hand.hit()
+g.dealer.hand.hit()
 print(g)
