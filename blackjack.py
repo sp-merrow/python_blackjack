@@ -1,5 +1,5 @@
 from random import betavariate, randint
-import dealer_logic
+from dealer_logic import *
 
 suitSymbols = {'SPADE':'♠', 'CLUB':'♣', 'DIAMOND':'♦', 'HEART':'♥'}
 cardTemplate = []
@@ -68,10 +68,12 @@ class Deck(list):
                 self.append(Card(c[1], c[2], False))
     
     def getRandom(self):
-        return self.pop(randint(0, (len(self)-1)))
+        try:
+            return self.pop(randint(0, (len(self)-1)))
+        except:
+            print('*** ERROR! DECK NOT PROPERLY INITIALIZED! ***')
 
 deck = Deck()
-
 
 class Hand(list):
     def __init__(self, isDealer, splitCard):
@@ -91,16 +93,19 @@ class Hand(list):
             self.points += card.points
 
     def chkAce(self):
-        aceList = [i for i in self if i.face == 'A']
+        handCopy = self.copy()
+        currentPts = self.points
+        aceList = [i for i in handCopy if i.face == 'A']
         aceList = iter(aceList)
-        while self.points > 21:
+        while currentPts > 21:
             try:
                 next(aceList).points = 1
             except StopIteration:
                 break
+        return currentPts
 
     def chkBreak(self):
-        self.chkAce()
+        testPts = self.chkAce()
         if self.points > 21:
             return True
         else:
@@ -147,34 +152,20 @@ class Hand(list):
         
         return fullHand
 
-
 class Dealer:
     def __init__(self, dumb):
         self.hand = Hand(True, None)
         self.cash = 500
         self.dumb = dumb
-        self.stratTable = dealer_logic.data
-    
-    def considerAce(self):
-        aceList = [i for i in self if i.face == 'A']
-        if aceList:
+        self.stratTable = data
 
     def play(self, pHand):
-        if self.dumb == True:
-            if self.hand.points <= 17:
+        if self.dumb:
+            if self.hand.points < 17:
                 self.hand.hit()
-        else:
-            faceUpCard = pHand[0]
-            if faceUpCard.face == 'A' or faceUpCard.points in range(7, 11):
-                if self.points < 17:
-                    self.hand.hit()
-            elif faceUpCard.points in range(4, 7):
-                if self.points < 12:
-                    self.hand.hit()
-            else:
-                if self.points < 13:
-                    self.hand.hit()
-        
+        #else:
+            #if pHand.points 
+
 class Player:
     betAmounts = {'1':1.00, '2':2.50, '3':5.00, '4':25.00, '5':50.00, '6':100.00, '7':500.00}
     def __init__(self):
@@ -240,16 +231,15 @@ class Player:
 class Game:
     def __init__(self):
         deck.shuffle()
-        self.dealer = Dealer()
+        self.dealer = Dealer(False)
         self.player = Player()
     
     def __str__(self):
-        return "*** Dealer's Hand ***\n" + self.dealerHand.__str__() + '\n\n*** Your Hand ***\n' + self.playerHand.__str__()
+        return "*** Dealer's Hand ***\n" + self.dealer.hand.__str__() + '\n\n*** Your Hand ***\n' + self.player.hand.__str__()
 
 
 
 
         
-
 g = Game()
 print(g)
