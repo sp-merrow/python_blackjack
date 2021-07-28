@@ -210,16 +210,30 @@ class Player:
             elif option == '3':
                 self.split()
             else:
-
+                self.currentBet *= 2
         elif self.hand.chkSplit():
-
-        
-        if choice == '1':
-            self.hand.hit()
-        elif choice == '2':
-            pass
+            option = self.takeInput(('1', '2', '3'), '\n1. Hit\n2. Stand\n3. Split\n\nEnter choice: ')
+            if option == '1':
+                self.hand.hit()
+            elif option == '2':
+                pass
+            else:
+                self.split()
+        elif self.hand.chkDouble():
+            option = self.takeInput(('1', '2', '3'), '\n1. Hit\n2. Stand\n3. Double Down\n\nEnter choice: ')
+            if option == '1':
+                self.hand.hit()
+            elif option == '2':
+                pass
+            else:
+                self.currentBet *= 2
         else:
-            self.split(self.hand[1])
+            option = self.takeInput(('1', '2'), '\n1. Hit\n2. Stand\n\nEnter choice: ')
+            if option == '1':
+                self.hand.hit()
+            else:
+                pass
+
 
 
 

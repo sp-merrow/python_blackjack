@@ -1,9 +1,9 @@
 import csv
 
 with open('strategy.csv', 'r') as st:
-    reader = csv.reader(st)
+    parsed = csv.reader(st, delimiter=',')
     data = []
-    for c, row in enumerate(reader):
+    for c, row in enumerate(parsed):
         newData = []
         if c == 0:
             pass
@@ -12,7 +12,7 @@ with open('strategy.csv', 'r') as st:
                 if ele.isdigit():
                     newData.append(int(ele))
                 else:
-                    newData.append(str(data))
+                    newData.append(str(ele))
             
             for d in newData:
                 data.append(newData)
