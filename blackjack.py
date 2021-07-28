@@ -1,8 +1,9 @@
-from random import betavariate, randint
-from dealer_logic import *
+from random import randint
+from dealer_logic import Logic
 
 suitSymbols = {'SPADE':'♠', 'CLUB':'♣', 'DIAMOND':'♦', 'HEART':'♥'}
 cardTemplate = []
+betAmounts = {'1':1.00, '2':2.50, '3':5.00, '4':25.00, '5':50.00, '6':100.00, '7':500.00}
 
 with open('card_template.txt', 'r', encoding='utf-8') as ct:
     for line in ct:
@@ -92,7 +93,14 @@ class Hand(list):
         for card in self:
             self.points += card.points
 
-    def chkAce(self):
+    def hasAce(self):
+        aceList = [i for i in self if i.face == 'A']
+        if aceList:
+            return True
+        else:
+            return False
+
+    def chkBreak(self):
         handCopy = self.copy()
         currentPts = self.points
         aceList = [i for i in handCopy if i.face == 'A']
@@ -102,11 +110,7 @@ class Hand(list):
                 next(aceList).points = 1
             except StopIteration:
                 break
-        return currentPts
-
-    def chkBreak(self):
-        testPts = self.chkAce()
-        if self.points > 21:
+        if currentPts > 21:
             return True
         else:
             return False
@@ -155,28 +159,49 @@ class Hand(list):
         return fullHand
 
 class Dealer:
-    def __init__(self, dumb):
+    cash = 500
+    def __init__(self, pCard):
         self.hand = Hand(True, None)
-        self.cash = 500
-        self.dumb = dumb
-        self.stratTable = data
+        self.pCard = pCard
+        self.isSplit = False
+        self.currentBet = betAmounts[str(randint(1, 6))]
 
-    def play(self, pHand):
-        if self.dumb:
-            if self.hand.points < 17:
-                self.hand.hit()
-        #else:
-            #if pHand.points 
+    def split(self):
+        self.spHand = Hand(False, self.hand[1])
+        self.isSplit = True
+    
+    def parseMove(self, move, currentHand):
+        if move == 'S':
+            pass
+        elif move == 'H':
+            currentHand.hit()
+        elif move == 'D':
+            self.currentBet *= 2
+        else:
+            self.split()
+        
+    def play(self):
+        mainLogic = Logic(self.pCard, self.hand)
+        move = mainLogic.decideMove()
+        if self.isSplit:
+            logicTwo = Logic(self.pCard, self.spHand)
+            moveTwo = logicTwo.decideMove()
+            self.parseMove(moveTwo, self.spHand)
+        self.parseMove(move, self.hand)
+
+
+            
 
 class Player:
-    betAmounts = {'1':1.00, '2':2.50, '3':5.00, '4':25.00, '5':50.00, '6':100.00, '7':500.00}
+    cash = 500
     def __init__(self):
         self.hand = Hand(False, None)
-        self.cash = 500
         self.currentBet = 0
+        self.isSplit = False
 
-    def split(self, spCard):
-        self.spHand = Hand(False, spCard)
+    def split(self):
+        self.spHand = Hand(False, self.hand[1])
+        self.isSplit = True
     
     def takeInput(self, valids, text):
         while True:
@@ -189,7 +214,7 @@ class Player:
     
     def makeBet(self):
         betAmt = self.takeInput(('1', '2', '3', '4', '5', '6', '7'), '\n*** MAKE BET ***\n\n1. $1.00\n2. $2.50\n3. $5.00\n4. $25.00\n5. $50.00\n6. $100.00\n7. $500.00\n\nEnter choice: ')
-        for k, v in Player.betAmounts.items():
+        for k, v in betAmounts.items():
             if betAmt == k:
                 self.currentBet = v
 
@@ -233,8 +258,8 @@ class Player:
 class Game:
     def __init__(self):
         deck.shuffle()
-        self.dealer = Dealer(False)
         self.player = Player()
+        self.dealer = Dealer(self.player.hand[0])
     
     def __str__(self):
         return "*** Dealer's Hand ***\n" + self.dealer.hand.__str__() + '\n\n*** Your Hand ***\n' + self.player.hand.__str__()
@@ -244,7 +269,8 @@ class Game:
 
         
 g = Game()
-g.player.hand.hit()
-g.player.hand.hit()
-g.dealer.hand.hit()
 print(g)
+print(g.dealer.currentBet)
+g.dealer.play()
+print(g)
+print(g.dealer.currentBet)
