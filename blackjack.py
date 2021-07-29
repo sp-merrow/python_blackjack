@@ -1,5 +1,6 @@
 from random import randint
 from dealer_logic import Logic
+from os import name, system
 
 suitSymbols = {'SPADE':'♠', 'CLUB':'♣', 'DIAMOND':'♦', 'HEART':'♥'}
 cardTemplate = []
@@ -9,8 +10,7 @@ with open('card_template.txt', 'r', encoding='utf-8') as ct:
     for line in ct:
         cardTemplate.append(line.replace('\n', ''))
     
-
-
+clear = lambda: system('cls' if name == 'nt' else 'cls')
 
 class Card:
     def __init__(self, suit, face, isFlipped):
@@ -24,7 +24,6 @@ class Card:
         else:
             self.points = int(self.face)
 
-    
     def __str__(self):
         if self.isFlipped:
             return self.flippedCard()
@@ -51,8 +50,6 @@ class Card:
             line = line.replace('F', '▒')
             line = line.replace('S', '▒')
             line = line.replace(' ', '▒')
-            
-            
             if count == 0:
                 fullCard += line
             else:
@@ -72,14 +69,16 @@ class Deck(list):
         try:
             return self.pop(randint(0, (len(self)-1)))
         except:
-            print('*** ERROR! DECK NOT PROPERLY INITIALIZED! ***')
+            print('*** DECK NOT PROPERLY INITIALIZED ***')
 
 deck = Deck()
 
 class Hand(list):
-    def __init__(self, isDealer, splitCard):
+    def __init__(self, isDealer, splitCard, bet):
         self.points = 0
         self.isDealer = isDealer
+        self.bet = bet
+        self.hasDoubled = False
         if not splitCard:
             self.newHand()
         else:
@@ -93,17 +92,41 @@ class Hand(list):
         for card in self:
             self.points += card.points
 
+    def endRound(self, won):
+        if self.isDealer:
+            if won == 'W':
+                Dealer.cash += self.bet * 2
+            if won == 'B':
+                Dealer.cash += self.bet + self.bet * 1.5
+            if won == 'D':
+                Dealer.cash += self.bet
+        else:
+            if won == 'W':
+                Player.cash += self.bet * 2
+            if won == 'B':
+                Player.cash += self.bet + self.bet * 1.5
+            if won == 'D':
+                Player.cash += self.bet
+    
+    def doubleDown(self):
+        if not self.hasDoubled:
+            self.bet *= 2
+            self.hasDoubled = True
+            if self.isDealer:
+                Dealer.cash -= self.bet    
+            else:
+                Player.cash -= self.bet
+
+
     def hasAce(self):
         aceList = [i for i in self if i.face == 'A']
         if aceList:
             return True
-        else:
-            return False
+        return False
 
     def chkBreak(self):
-        handCopy = self.copy()
         currentPts = self.points
-        aceList = [i for i in handCopy if i.face == 'A']
+        aceList = [i for i in self.copy() if i.face == 'A']
         aceList = iter(aceList)
         while currentPts > 21:
             try:
@@ -112,27 +135,25 @@ class Hand(list):
                 break
         if currentPts > 21:
             return True
-        else:
-            return False
+        return False
 
     def chkDouble(self):
         if self.points in range(9, 12):
             return True
-        else:
-            return False
+        return False
 
     def chkSplit(self):
         faces = [i.face for i in self]
         if faces[0] == faces[1]:
             return True
-        else:
-            return False
+        return False
 
     def chkBlackjack(self):
-        if self.points == 21:
+        if self.points == 21 and len(self) == 2:
             return True
-        else:
-            return False
+        if self.points == 21 and len(self) != 2:
+            print('*** CHKBLACKJACK METHOD IMPROPERLY INVOKED ***')
+        return False
 
     def hit(self):
         newCard = deck.getRandom()
@@ -158,17 +179,20 @@ class Hand(list):
         
         return fullHand
 
+
 class Dealer:
     cash = 500
     def __init__(self, pCard):
-        self.hand = Hand(True, None)
+        self.originalBet = betAmounts[str(randint(1, 6))]
+        self.hand = Hand(True, None, self.originalBet)
         self.pCard = pCard
         self.isSplit = False
-        self.currentBet = betAmounts[str(randint(1, 6))]
+        Dealer.cash -= self.originalBet
 
     def split(self):
-        self.spHand = Hand(False, self.hand[1])
+        self.spHand = Hand(False, self.hand[1], self.originalBet)
         self.isSplit = True
+        Dealer.cash -= self.originalBet
     
     def parseMove(self, move, currentHand):
         if move == 'S':
@@ -176,32 +200,57 @@ class Dealer:
         elif move == 'H':
             currentHand.hit()
         elif move == 'D':
-            self.currentBet *= 2
+            currentHand.doubleDown()
         else:
             self.split()
+    
+    def totalBust(self):
+        if self.isSplit:
+            if self.spHand.chkBreak() and self.hand.chkBreak():
+                return True
+        if self.hand.chkBreak():
+            return True
+        return False
         
     def play(self):
-        mainLogic = Logic(self.pCard, self.hand)
-        move = mainLogic.decideMove()
-        if self.isSplit:
-            logicTwo = Logic(self.pCard, self.spHand)
-            moveTwo = logicTwo.decideMove()
-            self.parseMove(moveTwo, self.spHand)
-        self.parseMove(move, self.hand)
+        while True:
+            returnStr = []
+            mainLogic = Logic(self.pCard, self.hand)
+            move = mainLogic.decideMove()
+            returnStr.append(move)
+            if self.isSplit:
+                logicTwo = Logic(self.pCard, self.spHand)
+                moveTwo = logicTwo.decideMove()
+                self.parseMove(moveTwo, self.spHand)
+                returnStr.append(moveTwo)
+            self.parseMove(move, self.hand)
+            if returnStr == ['S'] or ['S', 'S'] or self.totalBust():
+                break
+        return returnStr
 
-
-            
 
 class Player:
     cash = 500
     def __init__(self):
-        self.hand = Hand(False, None)
-        self.currentBet = 0
+        self.makeBet()
+        self.hand = Hand(False, None, self.originalBet)
         self.isSplit = False
+    
+    def __str__(self):
+        return f'Your current cash is ${Player.cash}'
+    
+    def totalBust(self):
+        if self.isSplit:
+            if self.spHand.chkBreak() and self.hand.chkBreak():
+                return True
+        if self.hand.chkBreak():
+            return True
+        return False
 
     def split(self):
-        self.spHand = Hand(False, self.hand[1])
+        self.spHand = Hand(False, self.hand[1], self.originalBet)
         self.isSplit = True
+        Player.cash -= self.originalBet
     
     def takeInput(self, valids, text):
         while True:
@@ -216,43 +265,72 @@ class Player:
         betAmt = self.takeInput(('1', '2', '3', '4', '5', '6', '7'), '\n*** MAKE BET ***\n\n1. $1.00\n2. $2.50\n3. $5.00\n4. $25.00\n5. $50.00\n6. $100.00\n7. $500.00\n\nEnter choice: ')
         for k, v in betAmounts.items():
             if betAmt == k:
-                self.currentBet = v
+                self.originalBet = v
+        Player.cash -= self.originalBet
 
     def play(self):
-        if self.hand.chkSplit() and self.hand.chkDouble():
+        returnStr = []
+        if self.hand.chkSplit() and self.hand.chkDouble() and not self.isSplit and not self.hand.hasDoubled:
             option = self.takeInput(('1', '2', '3', '4'), '\n1. Hit\n2. Stand\n3. Split\n4. Double Down\n\nEnter choice: ')
             if option == '1':
                 self.hand.hit()
+                returnStr.append('H')
             elif option == '2':
-                pass
+                returnStr.append('S')
             elif option == '3':
                 self.split()
+                returnStr.append('SP')
             else:
-                self.currentBet *= 2
-        elif self.hand.chkSplit():
+                self.hand.doubleDown()
+                returnStr.append('D')
+        elif self.hand.chkSplit() and not self.isSplit:
             option = self.takeInput(('1', '2', '3'), '\n1. Hit\n2. Stand\n3. Split\n\nEnter choice: ')
             if option == '1':
                 self.hand.hit()
+                returnStr.append('H')
             elif option == '2':
-                pass
+                returnStr.append('S')
             else:
                 self.split()
-        elif self.hand.chkDouble():
+                returnStr.append('SP')
+        elif self.hand.chkDouble() and not self.hand.hasDoubled:
             option = self.takeInput(('1', '2', '3'), '\n1. Hit\n2. Stand\n3. Double Down\n\nEnter choice: ')
             if option == '1':
                 self.hand.hit()
+                returnStr.append('H')
             elif option == '2':
-                pass
+                returnStr.append('S')
             else:
-                self.currentBet *= 2
+                self.hand.doubleDown()
+                returnStr.append('D')
         else:
             option = self.takeInput(('1', '2'), '\n1. Hit\n2. Stand\n\nEnter choice: ')
             if option == '1':
                 self.hand.hit()
+                returnStr.append('H')
             else:
-                pass
-
-
+                returnStr.append('S')
+        if self.isSplit:
+            if self.spHand.chkDouble() and not self.spHand.hasDoubled:
+                option = self.takeInput(('1', '2', '3'), '\n*** FOR HAND 2 ***\n\n1. Hit\n2. Stand\n3. Double Down\n\nEnter choice: ')
+                if option == '1':
+                    self.spHand.hit()
+                    returnStr.append('H')
+                elif option == '2':
+                    returnStr.append('S')
+                else:
+                    self.spHand.doubleDown()
+                    returnStr.append('D')
+            else:
+                option = self.takeInput(('1', '2'), '\n*** FOR HAND 2 ***\n\n1. Hit\n2. Stand\n\nEnter choice: ')
+                if option == '1':
+                    self.spHand.hit()
+                    returnStr.append('H')
+                else:
+                    returnStr.append('S')
+        return returnStr
+            
+        
 
 
 class Game:
@@ -262,15 +340,76 @@ class Game:
         self.dealer = Dealer(self.player.hand[0])
     
     def __str__(self):
-        return "*** Dealer's Hand ***\n" + self.dealer.hand.__str__() + '\n\n*** Your Hand ***\n' + self.player.hand.__str__()
-
-
-
-
+        if not self.dealer.isSplit and not self.player.isSplit:
+            return "*** Dealer's Hand ***\n" + self.dealer.hand.__str__() + '\n\n*** Your Hand ***\n' + self.player.hand.__str__()
+        if self.player.isSplit and not self.dealer.isSplit:
+            return "*** Dealer's Hand ***\n" + self.dealer.hand.__str__() + '\n\n*** Your 1st Hand ***\n' + self.player.hand.__str__() + '\n*** Your 2nd Hand ***\n' + self.player.spHand.__str__()
+        if self.dealer.isSplit and not self.player.isSplit:
+            return "*** Dealer's 1st Hand ***\n" + self.dealer.hand.__str__() + "\n*** Dealer's 2nd Hand ***\n" + self.dealer.spHand.__str__() + '\n\n*** Your Hand ***\n' + self.player.hand.__str__()
+        if self.player.isSplit and self.dealer.isSplit:
+            return "*** Dealer's 1st Hand ***\n" + self.dealer.hand.__str__() + "\n*** Dealer's 2nd Hand ***\n" + self.dealer.spHand.__str__() + '\n\n*** Your 1st Hand ***\n' + self.player.hand.__str__() + '\n*** Your 2nd Hand ***\n' + self.player.spHand.__str__()
+    
+    def eitherBlackjack(self):
+        if self.player.hand.chkBlackjack():
+            return '*** YOU HAVE BLACKJACK! YOU WIN! ***'
+        elif self.dealer.hand.chkBlackjack():
+            return '*** DEALER HAS BLACKJACK! DEALER WINS! ***'
+        else:
+            return ''
+    
+    def play(self):
+        self.lastDealerMove = self.dealer.play()
+        while True:
+            print(self)
+            self.lastPlayerMove = self.player.play()
+            if self.lastPlayerMove == ['S'] or self.lastPlayerMove == ['S', 'S'] or self.player.totalBust():
+                break
         
-g = Game()
-print(g)
-print(g.dealer.currentBet)
-g.dealer.play()
-print(g)
-print(g.dealer.currentBet)
+    def finishGame(self):
+        playerResults = []
+        dealerResults = []
+        if 'YOU' in self.eitherBlackjack():
+            self.player.hand.endRound('B')
+        if 'DEALER' in self.eitherBlackjack():
+            self.dealer.hand.endRound('B')
+        else:
+            if self.player.isSplit:
+                if not self.player.spHand.chkBreak():
+                    playerResults.append(self.player.spHand)
+            if not self.player.hand.chkBreak():
+                playerResults.append(self.player.hand)
+            if self.dealer.isSplit:
+                if not self.dealer.spHand.chkBreak():
+                    dealerResults.append(self.dealer.spHand)
+            if not self.dealer.hand.chkBreak():
+                dealerResults.append(self.dealer.hand)
+            bestP = max(playerResults.points)
+            bestD = max(dealerResults.points)
+            if bestP > bestD:
+                bestP.endRound('W')
+            else:
+                bestD.endRound('W')
+                        
+
+                
+        
+        
+
+
+
+print('\n*** Blackjack ***')
+
+while True:
+    currentGame = Game()
+    print(currentGame.player)
+
+    if currentGame.eitherBlackjack():
+        print(currentGame.eitherBlackjack())
+        currentGame.finishGame()
+    else:
+        currentGame.play()
+        currentGame.finishGame()
+    
+    cont = Player.takeInput(('y', 'n'), 'Play again? (y/n) ')
+    if cont == 'n':
+        break
