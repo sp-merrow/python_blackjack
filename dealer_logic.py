@@ -20,7 +20,10 @@ with open('strategy.csv', 'r') as st:
 class Logic:
     def __init__(self, pCard, myHand):
         self.pCard = pCard
-        self.opponentFace = pCard.face
+        if pCard.face in {'J', 'K', 'Q'}:
+            self.opponentFace = '10'
+        else:
+            self.opponentFace = pCard.face
         self.myHand = myHand
         self.myPoints = self.myHand.points
     
