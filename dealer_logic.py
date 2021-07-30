@@ -23,12 +23,12 @@ with open('strategy.csv', 'r') as st:
 class Logic:
     def __init__(self, pCard, myHand):
         self.pCard = pCard
-        self.opponentPoints = pCard.points
+        self.opponentFace = pCard.face
         self.myHand = myHand
         self.myPoints = self.myHand.points
     
     def decideMove(self):
-        valLocation = playerLookup.index(self.opponentPoints)
+        valLocation = playerLookup.index(self.opponentFace)
         if self.myHand.hasAce():
             lookupType = 'soft'
         else:
