@@ -288,8 +288,12 @@ class Player:
     
     def makeBet(self):
         clear()
+        if Player.cash <= 0:
+            print('*** MAKEBET INVOKED WITH INVALID PLAYER CASH ***')
         print(self)
         betAmt = takeInput(('1', '2', '3', '4', '5', '6', '7'), '\n1. $1.00\n2. $2.50\n3. $5.00\n4. $25.00\n5. $50.00\n6. $100.00\n7. $500.00\n\nEnter bet choice: ')
+        while betAmounts[betAmt] > Player.cash:
+            betAmt = takeInput(('1', '2', '3', '4', '5', '6', '7'), "\n1. $1.00\n2. $2.50\n3. $5.00\n4. $25.00\n5. $50.00\n6. $100.00\n7. $500.00\n\nCan't afford bet! Enter lower amount: ")
         for k, v in betAmounts.items():
             if betAmt == k:
                 self.originalBet = v
@@ -546,17 +550,32 @@ class Game:
 print('\n*** Blackjack ***')
 
 while True:
-    currentGame = Game()
-    if currentGame.eitherBlackjack():
-        print(currentGame.eitherBlackjack())
-        currentGame.finishGame()
-    else:
-        currentGame.play()
-        currentGame.finishGame()
+    if Player.cash == 0:
         clear()
-        print(currentGame)
-        print(currentGame.endgameStr())
-    
+        option = takeInput({'1', '2'}, "You're out of money! Options:\n1. Start over with default cash\n2. Exit\n")
+        if option == '1':
+            Player.cash, Dealer.cash = 500, 500
+        else:
+            pass #boilerplate code, will call end of program function once implemented
+    elif Dealer.cash == 0:
+        clear()
+        print('Dealer is out of cash! Player wins!')
+        option = takeInput({'1', '2'}, "Options:\n1. Start over with default cash\n2. Exit\n")
+        if option == '1':
+            Player.cash, Dealer.cash = 500, 500
+        else:
+            pass #boilerplate code, see above in Player.cash if statement
+    else:
+        currentGame = Game()
+        if currentGame.eitherBlackjack():
+            print(currentGame.eitherBlackjack())
+            currentGame.finishGame()
+        else:
+            currentGame.play()
+            currentGame.finishGame()
+            clear()
+            print(currentGame)
+            print(currentGame.endgameStr())    
     cont = takeInput(('y', 'n'), '\nPlay again? (y/n)\n')
     if cont == 'n':
         break
