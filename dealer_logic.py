@@ -7,10 +7,7 @@ with open('strategy.csv', 'r') as st:
         newData = []
         if c == 0:
             for ele in row:
-                if ele.isdigit():
-                    newData.append(int(ele))
-                else:
-                    newData.append(str(ele))
+                newData.append(str(ele))
             playerLookup = newData.copy()
         else:
             for ele in row:
