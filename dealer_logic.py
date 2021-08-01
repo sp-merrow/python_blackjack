@@ -18,7 +18,7 @@ with open('strategy.csv', 'r') as st:
             logicTable.append(newData)
 
 class Logic:
-    def __init__(self, pCard, myHand):
+    def __init__(self, pCard, myHand, isSP):
         self.pCard = pCard
         if pCard.face in {'J', 'K', 'Q'}:
             self.opponentFace = '10'
@@ -26,6 +26,7 @@ class Logic:
             self.opponentFace = pCard.face
         self.myHand = myHand
         self.myPoints = self.myHand.points
+        self.isSP = isSP
     
     def decideMove(self):
         valLocation = playerLookup.index(self.opponentFace)
@@ -33,7 +34,7 @@ class Logic:
             lookupType = 'soft'
         else:
             lookupType = 'hard'
-        if self.myHand.chkSplit():
+        if self.myHand.chkSplit() and not self.isSP:
             lookupType = 'pair'
 
         for row in logicTable:
