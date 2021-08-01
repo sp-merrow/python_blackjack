@@ -43,6 +43,9 @@ class Logic:
 
         for row in logicTable:
             if row[0] == lookupType and row[1] == self.myPoints:
-                return row[valLocation]
-            else:
-                raise LogicTableLookupFailed
+                move = row[valLocation]
+
+        if move not in {'S', 'H', 'D', 'SP'}:
+            raise LogicTableLookupFailed
+        else:
+            return move
