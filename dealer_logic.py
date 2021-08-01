@@ -17,6 +17,10 @@ with open('strategy.csv', 'r') as st:
                     newData.append(str(ele))
             logicTable.append(newData)
 
+class LogicTableLookupFailed(Exception):
+    def __str__(self):
+        return 'decideMove method could not find field'
+
 class Logic:
     def __init__(self, pCard, myHand, isSP):
         self.pCard = pCard
@@ -40,3 +44,5 @@ class Logic:
         for row in logicTable:
             if row[0] == lookupType and row[1] == self.myPoints:
                 return row[valLocation]
+            else:
+                raise LogicTableLookupFailed
