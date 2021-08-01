@@ -419,16 +419,12 @@ class Game:
             return ''
 
     def play(self):
-        pHandBust, pSplitHandBust = False, False
+        pBust= False
         while True:
-            #clear()
+            clear()
             print(self)
             self.lastPlayerMove = self.player.play()
-            if self.player.isSplit:
-                if self.player.spHand.chkBreak() and not pSplitHandBust:
-                    print('\n*** BUST! ***')
-                    pSplitHandBust = True
-            if self.player.hand.chkBreak() and not pHandBust:
+            if self.player.totalBust() and not pHandBust:
                 print('\n*** BUST! ***')
                 pHandBust = True
             self.lastDealerMove = self.dealer.play()
