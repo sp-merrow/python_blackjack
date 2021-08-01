@@ -41,11 +41,13 @@ class Logic:
         else:
             lookupType = 'hard'
 
+        move = "If you're reading this, move is unassigned."
         for row in logicTable:
             if row[0] == lookupType and row[1] == self.myPoints:
                 move = row[valLocation]
-
+        
         if move not in {'S', 'H', 'D', 'SP'}:
+            print(f'Move received: {move}')
             raise LogicTableLookupFailed
         else:
             return move
