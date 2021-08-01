@@ -30,12 +30,12 @@ class Logic:
     
     def decideMove(self):
         valLocation = playerLookup.index(self.opponentFace)
-        if self.myHand.hasAce():
+        if self.myHand.chkSplit() and not self.isSP:
+            lookupType = 'pair'
+        elif self.myHand.hasAce():
             lookupType = 'soft'
         else:
             lookupType = 'hard'
-        if self.myHand.chkSplit() and not self.isSP:
-            lookupType = 'pair'
 
         for row in logicTable:
             if row[0] == lookupType and row[1] == self.myPoints:
