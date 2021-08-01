@@ -103,7 +103,7 @@ class Hand(list):
             self.points += card.points
     
     def makeCopy(self):
-        handCopy = Hand(self.isDealer, False, self.bet, True)
+        handCopy = Hand(self.isDealer, None, self.bet, True)
         for c in self:
             handCopy.append(c)
         return handCopy
@@ -142,23 +142,35 @@ class Hand(list):
 
     def chkBreak(self):
         testList = self.makeCopy()
+        testList.points = self.points
         aceList = []
         for count, i in enumerate(testList):
             if i.face == 'A':
                 aceList.append([count, i])
-        if aceList:
+        if self.hasAce():
             aceList = iter(aceList)
             while testList.points > 21:
                 try:
                     currentAce = next(aceList)
-                    testList[currentAce[0]] = currentAce[1]
+                    testList.points -= 10
                 except StopIteration:
                     break
         if testList.points > 21:
-            del testList
             return True
-        del testList
         return False
+    
+    def changeAce(self):
+        aceList = []
+        for count, i in enumerate(self):
+            if i.face == 'A':
+                aceList.append([count, i])
+        aceList = iter(aceList)
+        while self.points > 21:
+            try:
+                currentAce = next(aceList)
+                self.points -= 10
+            except StopIteration:
+                break
 
     def chkDouble(self):
         if self.points in range(9, 12) and len(self) == 2 and not self.hasDoubled:
@@ -195,7 +207,7 @@ class Hand(list):
                     tempAdd.append(line + '\n')
                 else:
                     editLine = tempAdd[lineCount]
-                    editLine = editLine.replace('\n', ' ' + line + '\n')
+                    editLine = editLine.replace('\n', ' ' + line + '\t\n')
                     tempAdd[lineCount] = editLine
                     
         for i in tempAdd:
@@ -221,8 +233,12 @@ class Dealer:
             self.spHand = Hand(False, self.hand.pop(), self.originalBet, False)
             self.isSplit = True
             Dealer.cash -= self.originalBet
+        elif not self.hand.chkSplit() and not self.isSplit:
+            print('*** DEALER PERFORMED ILLEGAL SPLIT, NOT ALLOWED BY CHKSPLIT ***')
+        elif self.hand.chkSplit() and self.isSplit:
+            print('*** DEALER PERFORMED ILLEGAL SPLIT, ALREADY SPLIT ***')
         else:
-            print('*** DEALER PERFORMED ILLEGAL SPLIT ***')
+            print('*** DEALER PERFORMED ILLEGAL SPLIT, ALREADY SPLIT AND NOT ALLOWED BY CHKSPLIT ***')
 
     
     def parseMove(self, move, currentHand): #used by play method, takes move from dealer_logic and performs it
@@ -232,8 +248,10 @@ class Dealer:
             currentHand.hit()
         elif move == 'D':
             currentHand.doubleDown()
-        else:
+        elif move == 'SP':
             self.split()
+        else:
+            print(f'*** PARSEMOVE RECEIVED INVALID MOVE ***\nMove that was received: {move}')
 
     def totalBust(self): #returns true if all dealer's hands have busted, else false
         if self.isSplit:
@@ -258,10 +276,20 @@ class Dealer:
     def play(self):
         returnStr = []
         if not self.anyDouble() and not self.splitAce:
+            if self.hand.hasAce() and self.hand.chkBreak(): #if hand is bust and has an ace, make all aces equal to 1 until bust is resolved
+                self.hand.changeAce()
+                if self.hand.chkBreak(): #if bust not resolved, stand and return
+                    returnStr.append('S')
+                    return returnStr
             mainLogic = Logic(self.pCard, self.hand, self.isSplit)
             move = mainLogic.decideMove()
             returnStr.append(move)
             if self.isSplit:
+                if self.spHand.hasAce() and self.spHand.chkBreak(): #see above comments
+                    self.spHand.changeAce()
+                    if self.spHand.chkBreak():
+                        returnStr.append('S')
+                        return returnStr
                 logicTwo = Logic(self.pCard, self.spHand, self.isSplit)
                 moveTwo = logicTwo.decideMove()
                 self.parseMove(moveTwo, self.spHand)
@@ -298,7 +326,6 @@ class Player:
             self.spHand = Hand(False, self.hand.pop(), self.originalBet, False)
             self.isSplit = True
             Player.cash -= self.originalBet
-            print(self.spHand)
         else:
             print('*** PLAYER PERFORMED ILLEGAL SPLIT ***')
     
@@ -348,7 +375,10 @@ class Player:
                         self.split()
                         returnStr.append('SP')
                 elif self.hand.chkDouble():
-                    option = takeInput(('1', '2', '3'), '\n1. Hit\n2. Stand\n3. Double Down\n\nEnter choice: ')
+                    if self.isSplit:
+                        option = takeInput(('1', '2', '3'), '\n1. Hit\n2. Stand\n3. Double Down\n\nEnter choice for hand #1: ')
+                    else:
+                        option = takeInput(('1', '2', '3'), '\n1. Hit\n2. Stand\n3. Double Down\n\nEnter choice: ')
                     if option == '1':
                         self.hand.hit()
                         returnStr.append('H')
@@ -358,7 +388,10 @@ class Player:
                         self.hand.doubleDown()
                         returnStr.append('D')
                 else:
-                    option = takeInput(('1', '2'), '\n1. Hit\n2. Stand\n\nEnter choice: ')
+                    if self.isSplit:
+                        option = takeInput(('1', '2'), '\n1. Hit\n2. Stand\n\nEnter choice for hand #1: ')
+                    else:
+                        option = takeInput(('1', '2'), '\n1. Hit\n2. Stand\n\nEnter choice: ')
                     if option == '1':
                         self.hand.hit()
                         returnStr.append('H')
@@ -366,7 +399,7 @@ class Player:
                         returnStr.append('S')
             if self.isSplit and not self.spHand.chkBreak():
                 if self.spHand.chkDouble():
-                    option = takeInput(('1', '2', '3'), '\n*** FOR HAND 2 ***\n\n1. Hit\n2. Stand\n3. Double Down\n\nEnter choice: ')
+                    option = takeInput(('1', '2', '3'), '\n1. Hit\n2. Stand\n3. Double Down\n\nEnter choice for hand #2: ')
                     if option == '1':
                         self.spHand.hit()
                         returnStr.append('H')
@@ -376,7 +409,7 @@ class Player:
                         self.spHand.doubleDown()
                         returnStr.append('D')
                 else:
-                    option = takeInput(('1', '2'), '\n*** FOR HAND 2 ***\n\n1. Hit\n2. Stand\n\nEnter choice: ')
+                    option = takeInput(('1', '2'), '\n1. Hit\n2. Stand\n\nEnter choice for hand #2: ')
                     if option == '1':
                         self.spHand.hit()
                         returnStr.append('H')
@@ -398,35 +431,37 @@ class Game:
     
     def __str__(self):
         if not self.dealer.isSplit and not self.player.isSplit:
-            return "*** Dealer's Hand ***\n" + self.dealer.hand.__str__() + '\n\n*** Your Hand ***\n' + self.player.hand.__str__()
+            return "   *** Dealer's Hand ***\n" + self.dealer.hand.__str__() + '\n\n   *** Your Hand ***\n' + self.player.hand.__str__()
         if self.player.isSplit and not self.dealer.isSplit:
             if not self.player.spHand.chkBreak():
-                return "*** Dealer's Hand ***\n" + self.dealer.hand.__str__() + '\n\n*** Your 1st Hand ***\n' + self.player.hand.__str__() + '\n*** Your 2nd Hand ***\n' + self.player.spHand.__str__()
-            return "*** Dealer's Hand ***\n" + self.dealer.hand.__str__() + '\n\n*** Your 1st Hand ***\n' + self.player.hand.__str__() + '\n*** 2nd Hand Is Bust ***'
+                return "   *** Dealer's Hand ***\n" + self.dealer.hand.__str__() + '\n\n   *** Your Hands ***\n'\
+                + self.player.hand.__str__() + '\t\t' + self.player.spHand.__str__()
+            return "   *** Dealer's Hand ***\n" + self.dealer.hand.__str__() + '\n\n   *** Your Hands ***\n' + self.player.hand.__str__() + '\t\t*** 2nd Hand Is Bust ***'
         if self.dealer.isSplit and not self.player.isSplit:
-            return "*** Dealer's 1st Hand ***\n" + self.dealer.hand.__str__() + "\n*** Dealer's 2nd Hand ***\n" + self.dealer.spHand.__str__() + '\n\n*** Your Hand ***\n' + self.player.hand.__str__()
+            return "   *** Dealer's Hands ***\n"\
+            + self.dealer.hand.__str__() + '\t\t' + self.dealer.spHand.__str__() + '\n\n   *** Your Hand ***\n' + self.player.hand.__str__()
         if self.player.isSplit and self.dealer.isSplit:
             if not self.player.spHand.chkBreak():
-                return "*** Dealer's 1st Hand ***\n" + self.dealer.hand.__str__() + "\n*** Dealer's 2nd Hand ***\n" + self.dealer.spHand.__str__() + '\n\n*** Your 1st Hand ***\n' + self.player.hand.__str__() + '\n*** Your 2nd Hand ***\n' + self.player.spHand.__str__()
-            return "*** Dealer's 1st Hand ***\n" + self.dealer.hand.__str__() + "\n*** Dealer's 2nd Hand ***\n" + self.dealer.spHand.__str__() + '\n\n*** Your 1st Hand ***\n' + self.player.hand.__str__() + '\n*** 2nd Hand Is Bust ***'
+                return "   *** Dealer's Hands ***\n" + self.dealer.hand.__str__() + '\t\t'\
+                + self.dealer.spHand.__str__() + '\n\n   *** Your Hands ***\n' + self.player.hand.__str__() + '\t\t' + self.player.spHand.__str__()
+            return "   *** Dealer's Hands ***\n" + self.dealer.hand.__str__() + '\t\t' + self.dealer.spHand.__str__() +\
+            '\n\n   *** Your Hands ***\n' + self.player.hand.__str__() + '\t\t*** 2nd Hand Is Bust ***'
 
     def eitherBlackjack(self): #made individual method for blackjack case so it can be checked at game start
         if self.player.hand.chkBlackjack():
+            self.dealer.showCards()
             return self.__str__() + '\n\n*** YOU HAVE BLACKJACK! YOU WIN! ***'
         elif self.dealer.hand.chkBlackjack():
+            self.dealer.showCards()
             return self.__str__() + '\n\n*** DEALER HAS BLACKJACK! DEALER WINS! ***'
         else:
             return ''
 
     def play(self):
-        pBust= False
         while True:
             clear()
             print(self)
             self.lastPlayerMove = self.player.play()
-            if self.player.totalBust() and not pHandBust:
-                print('\n*** BUST! ***')
-                pHandBust = True
             self.lastDealerMove = self.dealer.play()
             if (self.lastDealerMove != ['S'] and self.lastDealerMove != ['S', 'S']) and (self.lastPlayerMove == ['S'] or self.lastPlayerMove == ['S', 'S'])\
             and not self.player.totalBust():
