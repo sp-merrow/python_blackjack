@@ -65,6 +65,9 @@ class Card:
                 fullCard += '\n' + line
         return fullCard
 
+class improperDeck(Exception):
+    def __str__(self):
+        return 'Deck not properly initialized.'
 
 class Deck(list):
     def shuffle(self):
@@ -78,21 +81,29 @@ class Deck(list):
         try:
             return self.pop(randint(0, (len(self)-1)))
         except:
-            print('*** DECK NOT PROPERLY INITIALIZED ***')
+            raise improperDeck
+    
+    def forceDraw(self, face):
+        for index, card in enumerate(self):
+            if card.face == face:
+                return self.pop(index)
 
 deck = Deck()
 
 class Hand(list):
-    def __init__(self, isDealer, splitCard, bet, isCopy):
+    def __init__(self, isDealer, splitCard, bet, isCopy, debugHand):
         self.points = 0
         self.isDealer = isDealer
         self.bet = bet
         self.hasDoubled = False
-        if not isCopy:
+        if not isCopy and not debugHand:
             if not splitCard:
                 self.newHand()
             else:
                 self.append(splitCard)
+        elif debugHand and not isCopy:
+            for i in debugHand:
+                self.append(i)
 
     def newHand(self):
         for i in range(2):
@@ -207,7 +218,7 @@ class Hand(list):
                     tempAdd.append(line + '\n')
                 else:
                     editLine = tempAdd[lineCount]
-                    editLine = editLine.replace('\n', ' ' + line + '\t\n')
+                    editLine = editLine.replace('\n', ' ' + line + '\n')
                     tempAdd[lineCount] = editLine
                     
         for i in tempAdd:
@@ -225,6 +236,30 @@ class Dealer:
         self.isSplit = False
         self.splitAce = False
         Dealer.cash -= self.originalBet
+    
+    def __str__(self):
+        if not self.isSplit:
+            return self.hand.__str__()
+        else:
+            tempAdd = []
+            fullHand = ''
+            for handCount, h in enumerate([self.hand, self.spHand]):
+                for count, card in enumerate(h):
+                    for lineCount, line in enumerate(card.__str__().split('\n')):
+                        if count == 0:
+                            tempAdd.append(line + '\n')
+                        elif handCount > 0:
+                            editLine = tempAdd[lineCount]
+                            editLine = editLine.replace('\n', '\t' + line + '\n')
+                        else:
+                            editLine = tempAdd[lineCount]
+                            editLine = editLine.replace('\n', ' ' + line + '\n')
+                            tempAdd[lineCount] = editLine
+                        
+            for i in tempAdd:
+                fullHand += ''.join(i)
+            
+            return fullHand
 
     def split(self): #splits hand
         if self.hand.chkSplit() and not self.isSplit:
@@ -309,7 +344,46 @@ class Player:
         self.splitAce = False
     
     def __str__(self):
-        return f'Your current cash is ${Player.cash:.2f}'
+        if not self.isSplit:
+            return self.hand.__str__()
+        else:
+            tempAdd = []
+            fullHand = ''
+            for handCount, h in enumerate([self.hand, self.spHand]):
+                if h.chkBreak():
+                    if tempAdd:
+                        for count, line in enumerate(tempAdd):
+                            if count == 3:
+                                tempAdd[3].replace('\n', f'\t** BUST **')
+                            else:
+                                editLine = line
+                                editLine = editLine[:-12] + '\n'
+                                tempAdd[count] = editLine
+                    else:
+                        for i in range(9):
+                            if i == 3:
+                                tempAdd.append('** BUST **\n')
+                            else:
+                                tempAdd.append('           \n')
+
+                for count, card in enumerate(h):
+                    cardLines = card.__str__().split('\n')
+                    for lineCount, line in enumerate(cardLines):
+                        if count == 0:
+                            tempAdd.append(line + '\n')
+                        else:
+                            editLine = tempAdd[lineCount]
+                            if count == len(h):
+                                editLine = editLine.replace('\n', '\t' + line + '\n')
+                            else:
+                                
+                                editLine = editLine.replace('\n', ' ' + line + '\n')
+                            tempAdd[lineCount] = editLine
+                        
+            for i in tempAdd:
+                fullHand += ''.join(i)
+            
+            return fullHand
     
     def totalBust(self):
         if self.isSplit:
@@ -338,7 +412,7 @@ class Player:
         clear()
         if Player.cash <= 0:
             print('*** MAKEBET INVOKED WITH INVALID PLAYER CASH ***')
-        print(self)
+        print(f'Your current cash is ${Player.cash:.2f}')
         betAmt = takeInput(('1', '2', '3', '4', '5', '6', '7'), '\n1. $1.00\n2. $2.50\n3. $5.00\n4. $25.00\n5. $50.00\n6. $100.00\n7. $500.00\n\nEnter bet choice: ')
         while betAmounts[betAmt] > Player.cash:
             betAmt = takeInput(('1', '2', '3', '4', '5', '6', '7'), "\n1. $1.00\n2. $2.50\n3. $5.00\n4. $25.00\n5. $50.00\n6. $100.00\n7. $500.00\n\nCan't afford bet! Enter lower amount: ")
@@ -431,21 +505,13 @@ class Game:
     
     def __str__(self):
         if not self.dealer.isSplit and not self.player.isSplit:
-            return "   *** Dealer's Hand ***\n" + self.dealer.hand.__str__() + '\n\n   *** Your Hand ***\n' + self.player.hand.__str__()
+            return "   *** Dealer's Hand ***\n" + self.dealer.__str__() + '\n\n   *** Your Hand ***\n' + self.player.__str__()
         if self.player.isSplit and not self.dealer.isSplit:
-            if not self.player.spHand.chkBreak():
-                return "   *** Dealer's Hand ***\n" + self.dealer.hand.__str__() + '\n\n   *** Your Hands ***\n'\
-                + self.player.hand.__str__() + '\t\t' + self.player.spHand.__str__()
-            return "   *** Dealer's Hand ***\n" + self.dealer.hand.__str__() + '\n\n   *** Your Hands ***\n' + self.player.hand.__str__() + '\t\t*** 2nd Hand Is Bust ***'
+            return "   *** Dealer's Hand ***\n" + self.dealer.__str__() + '\n\n   *** Your Hands ***\n'+ self.player.__str__()
         if self.dealer.isSplit and not self.player.isSplit:
-            return "   *** Dealer's Hands ***\n"\
-            + self.dealer.hand.__str__() + '\t\t' + self.dealer.spHand.__str__() + '\n\n   *** Your Hand ***\n' + self.player.hand.__str__()
+            return "   *** Dealer's Hands ***\n" + self.dealer.__str__() + '\n\n   *** Your Hand ***\n' + self.player.__str__()
         if self.player.isSplit and self.dealer.isSplit:
-            if not self.player.spHand.chkBreak():
-                return "   *** Dealer's Hands ***\n" + self.dealer.hand.__str__() + '\t\t'\
-                + self.dealer.spHand.__str__() + '\n\n   *** Your Hands ***\n' + self.player.hand.__str__() + '\t\t' + self.player.spHand.__str__()
-            return "   *** Dealer's Hands ***\n" + self.dealer.hand.__str__() + '\t\t' + self.dealer.spHand.__str__() +\
-            '\n\n   *** Your Hands ***\n' + self.player.hand.__str__() + '\t\t*** 2nd Hand Is Bust ***'
+            return "   *** Dealer's Hands ***\n" + self.dealer.__str__() + '\n\n   *** Your Hands ***\n' + self.player.__str__()
 
     def eitherBlackjack(self): #made individual method for blackjack case so it can be checked at game start
         if self.player.hand.chkBlackjack():
@@ -599,7 +665,9 @@ class Game:
             return '*** ALL BUSTED ***'
         print('*** ERROR IN ENDGAMESTR METHOD, INCORRECT WINSTATUS ***')
             
-
+class DebugTools():
+    def __init__(self):
+        deck.shuffle()
 
 print('\n*** Blackjack ***')
 
