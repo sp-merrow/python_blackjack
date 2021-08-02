@@ -7,7 +7,7 @@ with open('strategy.csv', 'r') as st:
         newData = []
         if c == 0:
             for ele in row:
-                newData.append(str(ele))
+                newData.append(str(ele).strip())
             playerLookup = newData.copy()
         else:
             for ele in row:
