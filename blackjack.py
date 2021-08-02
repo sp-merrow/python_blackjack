@@ -10,7 +10,7 @@ with open('card_template.txt', 'r', encoding='utf-8') as ct:
     for line in ct:
         cardTemplate.append(line.replace('\n', ''))
     
-clear = lambda: system('cls' if name == 'nt' else 'cls')
+clear = lambda: system('cls' if name == 'nt' else 'clear')
 
 def takeInput(valids, text): #input validation function
     while True:
