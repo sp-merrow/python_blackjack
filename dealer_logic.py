@@ -27,7 +27,7 @@ class Logic:
         if pCard.face in {'J', 'K', 'Q'}:
             self.opponentFace = '10'
         else:
-            self.opponentFace = pCard.face
+            self.opponentFace = str(pCard.face)
         self.myHand = myHand
         self.myPoints = self.myHand.points
         self.isSP = isSP
