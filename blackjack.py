@@ -121,16 +121,23 @@ class Hand(list):
         self.bet = bet
         self.hasDoubled = False
         if not isCopy and not debugHand:
+            self.debugMode = False
             if not splitCard:
                 self.newHand()
             else:
                 self.append(splitCard)
         elif debugHand and not isCopy:
+            self.debugMode = True
             for i in debugHand:
-                self.append(deck.forceDraw(i.face))
-                self.points += i.points
+                if type(i) == str:
+                    tempCard = deck.forceDraw(i)
+                    self.points += tempCard.points
+                    self.append(tempCard)
+                else:
+                    self.append(deck.forceDraw(i.face))
+                    self.points += i.points
         else:
-            pass
+            self.debugMode = False
 
     def newHand(self):
         for i in range(2):
@@ -144,6 +151,7 @@ class Hand(list):
         handCopy = Hand(self.isDealer, None, self.bet, True, None)
         for c in self:
             handCopy.append(c)
+            handCopy.points += c.points
         return handCopy
 
     def endRound(self, won):
@@ -180,7 +188,8 @@ class Hand(list):
 
     def chkBreak(self):
         testList = self.makeCopy()
-        testList.points = self.points
+        if self.debugMode and not self.isDealer:
+            print(f'Points (from chkBreak method): {testList.points}')
         aceList = []
         for count, i in enumerate(testList):
             if i.face == 'A':
@@ -359,7 +368,7 @@ class Dealer:
             self.parseMove(move, self.hand)
         else:
             returnStr.append('S')
-        return returnStr
+        return ''.join(returnStr)
 
 
 class Player:
@@ -376,34 +385,42 @@ class Player:
         else:
             tempAdd = []
             fullHand = ''
-            for handCount, h in enumerate([self.hand, self.spHand]):
+            hands = [self.hand, self.spHand]
+            for handCount, h in enumerate(hands):
                 if h.chkBreak():
-                    if tempAdd:
-                        for count, line in enumerate(tempAdd):
-                            if count == 3:
-                                tempAdd[3].replace('\n', f'\t** BUST **')
-                            else:
-                                editLine = line
-                                editLine = editLine[:-12] + '\n'
-                                tempAdd[count] = editLine
-                    else:
+                    if handCount > 0:
                         for i in range(9):
-                            if i == 3:
-                                tempAdd.append('** BUST **\n')
+                            if tempAdd: # LEFT OFF HERE, NEED TO CONTINUE WORK ON DUNDER STR METHOD////////////////////////////////////////////////////////////////
+                                if count == 3:
+                                    tempAdd[3].replace('\n', f'\t** BUST **')
+                                else:
+                                    editLine = tempAdd[count]
+                                    editLine = editLine[:-12] + '\n'
+                                    tempAdd[count] = editLine
                             else:
-                                tempAdd.append('           \n')
+                                if i == 3:
+                                    tempAdd.append('** BUST **\n')
+                                else:
+                                    tempAdd.append('           \n')
                 else:
                     for count, card in enumerate(h):
                         cardLines = card.__str__().split('\n')
                         for lineCount, line in enumerate(cardLines):
-                            if count == 0 and handCount == 0:
-                                tempAdd.append(line + '\n')
+                            if handCount == 0:
+                                if count == 0 and len(h) == 1:
+                                    tempAdd.append(line + '\t\t\n')
+                                elif count == 0 and len(h) != 1:
+                                    tempAdd.append(line + ' \n')
+                                else:
+                                    editLine = tempAdd[lineCount]
+                                    if count == len(h) - 1:
+                                        editLine = editLine.replace('\n', ' ' + line + '\t\t\n')
+                                    else:
+                                        editLine = editLine.replace('\n', ' ' + line + '\n')
+                                    tempAdd[lineCount] = editLine
                             else:
                                 editLine = tempAdd[lineCount]
-                                if count == len(h)-1:
-                                    editLine = editLine.replace('\n', '\t\t' + line + '\n')
-                                else:
-                                    editLine = editLine.replace('\n', ' ' + line + '\n')
+                                editLine = editLine.replace('\n', ' ' + line + '\n')
                                 tempAdd[lineCount] = editLine
                         
             for i in tempAdd:
@@ -447,33 +464,32 @@ class Player:
                 self.originalBet = v
         Player.cash -= self.originalBet
 
-    def play(self):
-        returnStr = []
-        if not self.anyDouble() and not self.splitAce: #need fix play method in class Player to improve split UI
-            if not self.hand.chkBreak():
+    def play(self, spLogic):
+        if not self.anyDouble() and not self.splitAce:
+            if not spLogic:
                 if self.hand.chkSplit() and self.hand.chkDouble() and not self.isSplit:
                     option = takeInput(('1', '2', '3', '4'), '\n1. Hit\n2. Stand\n3. Split\n4. Double Down\n\nEnter choice: ')
                     if option == '1':
                         self.hand.hit()
-                        returnStr.append('H')
+                        returnStr ='H'
                     elif option == '2':
-                        returnStr.append('S')
+                        returnStr = 'S'
                     elif option == '3':
                         self.split()
-                        returnStr.append('SP')
+                        returnStr = 'SP'
                     else:
                         self.hand.doubleDown()
-                        returnStr.append('D')
+                        returnStr = 'D'
                 elif self.hand.chkSplit() and not self.isSplit:
                     option = takeInput(('1', '2', '3'), '\n1. Hit\n2. Stand\n3. Split\n\nEnter choice: ')
                     if option == '1':
                         self.hand.hit()
-                        returnStr.append('H')
+                        returnStr = 'H'
                     elif option == '2':
-                        returnStr.append('S')
+                        returnStr = 'S'
                     else:
                         self.split()
-                        returnStr.append('SP')
+                        returnStr = 'SP'
                 elif self.hand.chkDouble():
                     if self.isSplit:
                         option = takeInput(('1', '2', '3'), '\n1. Hit\n2. Stand\n3. Double Down\n\nEnter choice for hand #1: ')
@@ -481,12 +497,12 @@ class Player:
                         option = takeInput(('1', '2', '3'), '\n1. Hit\n2. Stand\n3. Double Down\n\nEnter choice: ')
                     if option == '1':
                         self.hand.hit()
-                        returnStr.append('H')
+                        returnStr = 'H'
                     elif option == '2':
-                        returnStr.append('S')
+                        returnStr = 'S'
                     else:
                         self.hand.doubleDown()
-                        returnStr.append('D')
+                        returnStr = 'D'
                 else:
                     if self.isSplit:
                         option = takeInput(('1', '2'), '\n1. Hit\n2. Stand\n\nEnter choice for hand #1: ')
@@ -494,29 +510,48 @@ class Player:
                         option = takeInput(('1', '2'), '\n1. Hit\n2. Stand\n\nEnter choice: ')
                     if option == '1':
                         self.hand.hit()
-                        returnStr.append('H')
+                        returnStr = 'H'
                     else:
-                        returnStr.append('S')
-            if self.isSplit and not self.spHand.chkBreak():
-                if self.spHand.chkDouble():
-                    option = takeInput(('1', '2', '3'), '\n1. Hit\n2. Stand\n3. Double Down\n\nEnter choice for hand #2: ')
-                    if option == '1':
-                        self.spHand.hit()
-                        returnStr.append('H')
-                    elif option == '2':
-                        returnStr.append('S')
+                        returnStr = 'S'
+            else:
+                if spLogic == 1 and not self.hand.chkBreak():
+                    if self.hand.chkDouble():
+                        option = takeInput(('1', '2', '3'), '\n1. Hit\n2. Stand\n3. Double Down\n\nEnter choice for hand #1: ')
+                        if option == '1':
+                            self.hand.hit()
+                            returnStr = 'H'
+                        elif option == '2':
+                            returnStr = 'S'
+                        else:
+                            self.hand.doubleDown()
+                            returnStr = 'D'
                     else:
-                        self.spHand.doubleDown()
-                        returnStr.append('D')
+                        option = takeInput(('1', '2'), '\n1. Hit\n2. Stand\n\nEnter choice for hand #1: ')
+                        if option == '1':
+                            self.hand.hit()
+                            returnStr = 'H'
+                        else:
+                            returnStr = 'S'
                 else:
-                    option = takeInput(('1', '2'), '\n1. Hit\n2. Stand\n\nEnter choice for hand #2: ')
-                    if option == '1':
-                        self.spHand.hit()
-                        returnStr.append('H')
+                    if self.spHand.chkDouble():
+                        option = takeInput(('1', '2', '3'), '\n1. Hit\n2. Stand\n3. Double Down\n\nEnter choice for hand #2: ')
+                        if option == '1':
+                            self.spHand.hit()
+                            returnStr = 'H'
+                        elif option == '2':
+                            returnStr = 'S'
+                        else:
+                            self.spHand.doubleDown()
+                            returnStr = 'D'
                     else:
-                        returnStr.append('S')
+                        option = takeInput(('1', '2'), '\n1. Hit\n2. Stand\n\nEnter choice for hand #2: ')
+                        if option == '1':
+                            self.spHand.hit()
+                            returnStr = 'H'
+                        else:
+                            returnStr = 'S'
         else:
-            returnStr.append('S')
+            returnStr = 'S'
         return returnStr
             
         
@@ -527,8 +562,10 @@ class Game:
         deck.shuffle()
         if debug:
             self.player = Player(debug)
+            self.debugMode = True
         else:
             self.player = Player(None)
+            self.debugMode = False
         self.dealer = Dealer(self.player.hand[0])
         self.winStatus = None
     
@@ -553,18 +590,36 @@ class Game:
             return ''
 
     def play(self):
-        while True:
-            clear()
+        lastPlayerSPcard = 'X'
+        while True: #loops until break condition (if either bust or both stand) at end is met
+            if not self.debugMode:
+                clear()
             print(self)
-            self.lastPlayerMove = self.player.play()
-            self.lastDealerMove = self.dealer.play()
-            if (self.lastDealerMove != ['S'] and self.lastDealerMove != ['S', 'S']) and (self.lastPlayerMove == ['S'] or self.lastPlayerMove == ['S', 'S'])\
-            and not self.player.totalBust():
-                while self.lastDealerMove != ['S'] and self.lastDealerMove != ['S', 'S'] and not self.dealer.totalBust():
-                    self.lastDealerMove = self.dealer.play()
-            if ( (self.lastPlayerMove == ['S'] or self.lastPlayerMove == ['S', 'S']) and\
-                (self.lastDealerMove == ['S'] or self.lastDealerMove == ['S', 'S']) ) or\
-                (self.player.totalBust() or self.dealer.totalBust()):
+            if not self.player.isSplit:
+                lastPlayerMove = self.player.play(None)
+            else:
+                if 'S' not in {lastPlayerMove, lastPlayerSPcard} and not ( self.player.hand.chkBreak() or self.player.spHand.chkBreak() ):
+                    for i in range(1, 3):
+                        if not self.debugMode:
+                            clear()
+                        print(self)
+                        tempMove = self.player.play(i)
+                        if i == 1:
+                            lastPlayerMove = tempMove
+                        else:
+                            lastPlayerSPcard = tempMove
+                else:
+                    if self.player.hand.chkBreak() or lastPlayerMove == 'S':
+                        lastPlayerSPcard = self.player.play(2)
+                    else:
+                        lastPlayerMove = self.player.play(1)
+            lastDealerMove = self.dealer.play()
+            joinedPlayerMoves = lastPlayerMove + lastPlayerSPcard
+            if lastDealerMove not in {'S', 'SS'} and joinedPlayerMoves in {'SX', 'SS'} and not self.player.totalBust():
+                while lastDealerMove not in {'S', 'SS'} and not self.dealer.totalBust():
+                    lastDealerMove = self.dealer.play()
+            if ( joinedPlayerMoves in {'SX', 'SS'} and lastDealerMove in {'S', 'SS'} ) or (self.player.totalBust() or self.dealer.totalBust()) or\
+                ( 'S' in joinedPlayerMoves and ( self.player.hand.chkBreak() or self.player.spHand.chkBreak() ) ):
                 break
 
     def finishGame(self):
@@ -719,6 +774,7 @@ def debug():
             clear()
             print(currentGame)
             print(currentGame.endgameStr())
+            input('\n\nPress enter to continue.')
 
 
 
