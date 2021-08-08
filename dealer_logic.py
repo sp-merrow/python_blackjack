@@ -47,7 +47,7 @@ class Logic:
                 move = row[valLocation]
         
         if move not in {'S', 'H', 'D', 'SP'}:
-            print(f'Move received: {move}')
+            print(f'Move received: {move}\nPlayer card face: {self.opponentFace}\nDealer points: {self.myPoints}')
             raise LogicTableLookupFailed
         else:
             return move
