@@ -128,6 +128,7 @@ class Hand(list):
         elif debugHand and not isCopy:
             for i in debugHand:
                 self.append(deck.forceDraw(i.face))
+                self.points += i.points
         else:
             pass
 
@@ -210,7 +211,7 @@ class Hand(list):
                 break
 
     def chkDouble(self):
-        if self.points in range(9, 12) and len(self) == 2 and not self.hasDoubled:
+        if ( self.points in range(9, 12) ) and len(self) == 2 and not self.hasDoubled:
             return True
         return False
 
