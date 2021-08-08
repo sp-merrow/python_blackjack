@@ -14,7 +14,7 @@ with open('strategy.csv', 'r') as st:
                 if ele.isdigit():
                     newData.append(int(ele))
                 else:
-                    newData.append(str(ele))
+                    newData.append(str(ele).strip())
             logicTable.append(newData)
 
 class LogicTableLookupFailed(Exception):
