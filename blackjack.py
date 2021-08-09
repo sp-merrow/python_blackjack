@@ -21,6 +21,11 @@ def takeInput(valids, text): #input validation function
         else:
             return choice
 
+def findKey(searchVal, testDict):
+    for k, v in testDict.items():
+        if v == searchVal:
+            return k
+
 class Card:
     def __init__(self, suit, face, isFlipped):
         self.suit = suit
@@ -627,37 +632,39 @@ class Game:
 
     def finishGame(self):
         self.dealer.showCards()
-        playerResults = {}
-        dealerResults = {}
+        playerResults = []
+        dealerResults = []
         if 'YOU' in self.eitherBlackjack():
             self.player.hand.endRound('B')
         elif 'DEALER' in self.eitherBlackjack():
             self.dealer.hand.endRound('B')
         elif not self.player.totalBust() and not self.dealer.totalBust():
             if self.player.isSplit and not self.player.spHand.chkBreak():
-                playerResults[self.player.spHand.points] = self.player.spHand
+                playerResults.append(self.player.spHand)
             if not self.player.hand.chkBreak():
-                playerResults[self.player.hand.points] = self.player.hand
+                playerResults.append(self.player.hand)
             if self.dealer.isSplit and not self.dealer.spHand.chkBreak():
-                dealerResults[self.dealer.spHand.points] = self.dealer.spHand
+                dealerResults.append(self.dealer.spHand)
             if not self.dealer.hand.chkBreak():
-                dealerResults[self.dealer.hand.points] = self.dealer.hand
+                dealerResults.append(self.dealer.hand)
             
-            pKeys = list(playerResults.keys())
-            dKeys = list(dealerResults.keys())
-            bestP = max(pKeys)
-            bestD = max(dKeys)
+            pScores = {c : i.points for c, i in enumerate(playerResults)}
+            dScores = {c : i.points for c, i in enumerate(dealerResults)}
+            bestP = max(pScores.values())
+            bestD = max(dScores.values())
+            pVals = list(pScores.values())
+            dVals = list(dScores.values())
 
             def pointChk(): #used 3 inner functions because these snippets of code were used more than once
                 if bestP > bestD:
-                    playerResults[bestP].endRound('W')
+                    playerResults[findKey(bestP, pScores)].endRound('W')
                     self.winStatus = 'pw'
                 elif bestP == bestD:
-                    playerResults[bestP].endRound('D')
-                    dealerResults[bestD].endRound('D')
+                    playerResults[findKey(bestP, pScores)].endRound('D')
+                    dealerResults[findKey(bestD, dScores)].endRound('D')
                     self.winStatus = 'draw'
                 else:
-                    dealerResults[bestD].endRound('W')
+                    dealerResults[findKey(bestD, dScores)].endRound('W')
                     self.winStatus = 'dw'
                 
             def samePlayerPointChk(): #see pointChk comment
@@ -668,10 +675,10 @@ class Game:
                 elif bestP == bestD:
                     self.player.hand.endRound('D')
                     self.player.spHand.endRound('D')
-                    dealerResults[bestD].endRound('D')
+                    dealerResults[findKey(bestD, dScores)].endRound('D')
                     self.winStatus = 'draw'
                 else:
-                    dealerResults[bestD].endRound('W')
+                    dealerResults[findKey(bestD, dScores)].endRound('W')
                     self.winStatus = 'dw'
 
             def sameDealerPointChk(): #see pointChk comment
@@ -682,30 +689,30 @@ class Game:
                 elif bestD == bestP:
                     self.dealer.hand.endRound('D')
                     self.dealer.spHand.endRound('D')
-                    playerResults[bestP].endRound('D')
+                    playerResults[findKey(bestP, pScores)].endRound('D')
                     self.winStatus = 'draw'
                 else:
-                    playerResults[bestP].endRound('W')
+                    playerResults[findKey(bestP, pScores)].endRound('W')
                     self.winStatus = 'pw'
 
             if len(playerResults) == 1 and len(dealerResults) == 1:
                 pointChk()
             elif len(playerResults) > len(dealerResults):
-                if pKeys[0] != pKeys[1]:
+                if pVals[0] != pVals[1]:
                     pointChk()
                 else:
                     samePlayerPointChk()
             elif len(playerResults) < len(dealerResults):
-                if dKeys[0] != dKeys[1]:
+                if dVals[0] != dVals[1]:
                     pointChk()
                 else:
                     sameDealerPointChk()
             else:
-                if (pKeys[0] != pKeys[1]) and (dKeys[0] != dKeys[1]):
+                if (pVals[0] != pVals[1]) and (dVals[0] != dVals[1]):
                     pointChk()
-                elif (pKeys[0] == pKeys[1]) and (dKeys[0] != dKeys[1]):
+                elif (pVals[0] == pVals[1]) and (dVals[0] != dVals[1]):
                     samePlayerPointChk()
-                elif (pKeys[0] != pKeys[1]) and (dKeys[0] == dKeys[1]):
+                elif (pVals[0] != pVals[1]) and (dVals[0] == dVals[1]):
                     sameDealerPointChk()
                 else:
                     if bestP > bestD:

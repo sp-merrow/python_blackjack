@@ -2,6 +2,7 @@ Game is now in a playable state, still working on interface as well as ironing o
 
 Current WIPS:
 -Ironing out bugs in finishGame method in class Game, sometimes displays wrong win status
+(hopefully fixed this by changing finishGame method from dict based to list based)
 -Fixing bug in play method in class Dealer, sometimes passes a 0 as hand point value to dealer_logic.py
 -Fixing minor graphical glitch when player has split and 2nd hand goes bust
 
