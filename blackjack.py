@@ -19,8 +19,7 @@ def takeInput(valids, text): #input validation function
         if choice not in valids:
             print('\nInvalid option. Please try again.')
         else:
-            break
-    return choice
+            return choice
 
 class Card:
     def __init__(self, suit, face, isFlipped):
@@ -624,7 +623,7 @@ class Game:
                     sleep(0.5)
             if ( joinedPlayerMoves in {'SX', 'SS'} and lastDealerMove in {'S', 'SS'} ) or (self.player.totalBust() or self.dealer.totalBust()) or\
                 ( 'S' in joinedPlayerMoves and ( self.player.hand.chkBreak() or self.player.spHand.chkBreak() ) ):
-                break
+                return
 
     def finishGame(self):
         self.dealer.showCards()
@@ -767,7 +766,7 @@ def debug():
         elif choice == '3':
             hand = deck.getDouble()
         else:
-            break
+            return
         currentGame = Game(hand)
         if currentGame.eitherBlackjack():
             print(currentGame.eitherBlackjack())
