@@ -1,8 +1,9 @@
 Game is now in a playable state, still working on interface as well as ironing out remaining bugs.
 
-The split function makes much more sense to use now, however the interface is still a WIP. I've succeeded in printing the separate hands
-in a split scenario on the same line, but I'm still ironing out some bugs concerning what the program outputs during a split when
-one of the hands goes bust.
+Current WIPS:
+-Ironing out bugs in finishGame method in class Game, sometimes displays wrong win status
+-Fixing bug in play method in class Dealer, sometimes passes a 0 as hand point value to dealer_logic.py
+-Fixing minor graphical glitch when player has split and 2nd hand goes bust
 
 The program probably won't full on crash at this stage, but no guarantees.
 
