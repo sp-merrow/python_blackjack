@@ -18,12 +18,15 @@ with open('strategy.csv', 'r') as st:
             logicTable.append(newData)
 
 class LogicTableLookupFailed(Exception):
-    def __init__(self, move, opponentFace, myPoints):
+    def __init__(self, move, opponentFace, myPoints, faces, isSP):
         self.move = move
         self.opponentFace = opponentFace
         self.myPoints = myPoints
+        self.faces = faces
+        self.isSP = isSP
     def __str__(self):
-        return f'decideMove method could not find field.\n\nTraceback info:\nMove received: {self.move}\nPlayer card face: {self.opponentFace}\nDealer points: {self.myPoints}'
+        return f'decideMove method could not find field.\n\nTraceback info:\nMove received: {self.move}\nPlayer card face: \
+        {self.opponentFace}\nDealer points: {self.myPoints}\nCards in hand: {self.faces}\nDealer split status: {self.isSP}'
 
 class Logic:
     def __init__(self, pCard, myHand, isSP):
@@ -51,7 +54,6 @@ class Logic:
                 move = row[valLocation]
         
         if move not in {'S', 'H', 'D', 'SP'}:
-            print(f'Move received: {move}\nPlayer card face: {self.opponentFace}\nDealer points: {self.myPoints}')
-            raise LogicTableLookupFailed(move, self.opponentFace, self.myPoints)
+            raise LogicTableLookupFailed(move, self.opponentFace, self.myPoints, [i.face for i in self.myHand], self.isSP)
         else:
             return move
