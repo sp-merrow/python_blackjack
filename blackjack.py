@@ -301,7 +301,7 @@ class Dealer:
         if self.hand.chkSplit() and not self.isSplit:
             if self.hand[0] == 'A' and self.hand[1] == 'A':
                 self.splitAce = True
-            self.spHand = Hand(False, self.hand.pop(), self.originalBet, False, None)
+            self.spHand = Hand(True, self.hand.pop(), self.originalBet, False, None)
             self.isSplit = True
             Dealer.cash -= self.originalBet
         elif not self.hand.chkSplit() and not self.isSplit:
@@ -346,28 +346,42 @@ class Dealer:
 
     def play(self):
         returnStr = []
-        if not self.anyDouble() and not self.splitAce:
+        if not self.anyDouble() and not self.splitAce: #if dealer has not doubled down, and has not split aces
             if self.hand.hasAce() and self.hand.chkBreak(): #if hand is bust and has an ace, make all aces equal to 1 until bust is resolved
                 self.hand.changeAce()
                 if self.hand.chkBreak(): #if bust not resolved, stand and return
-                    returnStr.append('S')
-                    return returnStr
-            mainLogic = Logic(self.pCard, self.hand, self.isSplit)
-            move = mainLogic.decideMove()
-            returnStr.append(move)
+                    returnStr.append('S') and not self.hand.hasAce()
+            elif self.hand.chkBreak():
+                returnStr.append('S')
+            else:
+                mainLogic = Logic(self.pCard, self.hand, self.isSplit)
+                move = mainLogic.decideMove()
+                returnStr.append(move)
+                self.parseMove(move, self.hand)
             if self.isSplit:
                 if self.spHand.hasAce() and self.spHand.chkBreak(): #see above comments
                     self.spHand.changeAce()
                     if self.spHand.chkBreak():
                         returnStr.append('S')
-                        return returnStr
-                logicTwo = Logic(self.pCard, self.spHand, self.isSplit)
-                moveTwo = logicTwo.decideMove()
-                self.parseMove(moveTwo, self.spHand)
-                returnStr.append(moveTwo)
-            self.parseMove(move, self.hand)
+                elif self.spHand.chkBreak():
+                    returnStr.append('S')
+                else:
+                    logicTwo = Logic(self.pCard, self.spHand, self.isSplit)
+                    moveTwo = logicTwo.decideMove()
+                    self.parseMove(moveTwo, self.spHand)
+                    returnStr.append(moveTwo)
         else:
-            returnStr.append('S')
+            if len(self.hand) == 1 and not self.hand.chkBreak():
+                self.hand.hit()
+                returnStr.append('H')
+            else:
+                returnStr.append('S')
+            if self.isSplit:
+                if len(self.spHand) == 1 and not self.spHand.chkBreak():
+                    self.spHand.hit()
+                    returnStr.append('H')
+                else:
+                    returnStr.append('S')
         return ''.join(returnStr)
 
 
@@ -391,12 +405,12 @@ class Player:
                     if handCount > 0:
                         for i in range(9):
                             if tempAdd: # LEFT OFF HERE, NEED TO CONTINUE WORK ON DUNDER STR METHOD////////////////////////////////////////////////////////////////
-                                if count == 3:
-                                    tempAdd[3].replace('\n', f'\t** BUST **')
+                                if i == 3:
+                                    editLine = tempAdd[3].replace('\n', f'\t** BUST **')
                                 else:
-                                    editLine = tempAdd[count]
+                                    editLine = tempAdd[i]
                                     editLine = editLine[:-12] + '\n'
-                                    tempAdd[count] = editLine
+                                tempAdd[i] = editLine
                             else:
                                 if i == 3:
                                     tempAdd.append('** BUST **\n')
