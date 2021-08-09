@@ -1,6 +1,7 @@
 from random import randint
 from dealer_logic import Logic
 from os import name, system
+from time import sleep
 
 suitSymbols = {'SPADE':'♠', 'CLUB':'♣', 'DIAMOND':'♦', 'HEART':'♥'}
 cardTemplate = []
@@ -126,6 +127,7 @@ class Hand(list):
                 self.newHand()
             else:
                 self.append(splitCard)
+                self.points += splitCard.points
         elif debugHand and not isCopy:
             self.debugMode = True
             for i in debugHand:
@@ -178,7 +180,6 @@ class Hand(list):
             else:
                 Player.cash -= self.bet
             self.bet *= 2
-            self.hit()
 
     def hasAce(self):
         aceList = [i for i in self if i.face == 'A']
@@ -188,36 +189,27 @@ class Hand(list):
 
     def chkBreak(self):
         testList = self.makeCopy()
-        if self.debugMode and not self.isDealer:
-            print(f'Points (from chkBreak method): {testList.points}')
-        aceList = []
-        for count, i in enumerate(testList):
-            if i.face == 'A':
-                aceList.append([count, i])
+        aceList = [i for i in self if i.face == 'A']
         if self.hasAce():
             aceList = iter(aceList)
-            while testList.points > 21:
-                try:
-                    currentAce = next(aceList)
+            for a in aceList:
+                if testList.points > 21:
                     testList.points -= 10
-                except StopIteration:
+                else:
                     break
+        if self.debugMode and not self.isDealer:
+            print(f'Ace adjusted points (from chkBreak method): {testList.points}')
         if testList.points > 21:
             return True
         return False
     
-    def changeAce(self):
-        aceList = []
-        for count, i in enumerate(self):
-            if i.face == 'A':
-                aceList.append([count, i])
-        aceList = iter(aceList)
-        while self.points > 21:
-            try:
-                currentAce = next(aceList)
+    def changeAce(self): # possibly unneeded, will delete when program finished if not utilized
+        aceList = [i for i in self if i.face == 'A']
+        for a in aceList:
+            if self.points > 21:
                 self.points -= 10
-            except StopIteration:
-                break
+            else:
+                return
 
     def chkDouble(self):
         if ( self.points in range(9, 12) ) and len(self) == 2 and not self.hasDoubled:
@@ -347,25 +339,21 @@ class Dealer:
     def play(self):
         returnStr = []
         if not self.anyDouble() and not self.splitAce: #if dealer has not doubled down, and has not split aces
-            if self.hand.hasAce() and self.hand.chkBreak(): #if hand is bust and has an ace, make all aces equal to 1 until bust is resolved
-                self.hand.changeAce()
-                if self.hand.chkBreak(): #if bust not resolved, stand and return
-                    returnStr.append('S') and not self.hand.hasAce()
-            elif self.hand.chkBreak():
+            if self.hand.chkBreak():
                 returnStr.append('S')
             else:
+                if self.hand.hasAce:
+                    self.hand.changeAce()
                 mainLogic = Logic(self.pCard, self.hand, self.isSplit)
                 move = mainLogic.decideMove()
                 returnStr.append(move)
                 self.parseMove(move, self.hand)
             if self.isSplit:
-                if self.spHand.hasAce() and self.spHand.chkBreak(): #see above comments
-                    self.spHand.changeAce()
-                    if self.spHand.chkBreak():
-                        returnStr.append('S')
-                elif self.spHand.chkBreak():
+                if self.spHand.chkBreak():
                     returnStr.append('S')
                 else:
+                    if self.spHand.hasAce():
+                        self.spHand.changeAce()
                     logicTwo = Logic(self.pCard, self.spHand, self.isSplit)
                     moveTwo = logicTwo.decideMove()
                     self.parseMove(moveTwo, self.spHand)
@@ -402,20 +390,19 @@ class Player:
             hands = [self.hand, self.spHand]
             for handCount, h in enumerate(hands):
                 if h.chkBreak():
-                    if handCount > 0:
-                        for i in range(9):
-                            if tempAdd: # LEFT OFF HERE, NEED TO CONTINUE WORK ON DUNDER STR METHOD////////////////////////////////////////////////////////////////
-                                if i == 3:
-                                    editLine = tempAdd[3].replace('\n', f'\t** BUST **')
-                                else:
-                                    editLine = tempAdd[i]
-                                    editLine = editLine[:-12] + '\n'
-                                tempAdd[i] = editLine
+                    for i in range(9):
+                        if handCount > 0:
+                            if i == 3:
+                                newLine = '\t** BUST **\n'
                             else:
-                                if i == 3:
-                                    tempAdd.append('** BUST **\n')
-                                else:
-                                    tempAdd.append('           \n')
+                                newLine = '\n'
+                            normalLine = tempAdd[i]
+                            tempAdd.append(normalLine.replace('\n', newLine))
+                        else:
+                            if i == 3:
+                                tempAdd.append(' ** BUST **     \n')
+                            else:
+                                tempAdd.append('\t\t\n')
                 else:
                     for count, card in enumerate(h):
                         cardLines = card.__str__().split('\n')
@@ -632,6 +619,9 @@ class Game:
             if lastDealerMove not in {'S', 'SS'} and joinedPlayerMoves in {'SX', 'SS'} and not self.player.totalBust():
                 while lastDealerMove not in {'S', 'SS'} and not self.dealer.totalBust():
                     lastDealerMove = self.dealer.play()
+                    clear()
+                    print(self)
+                    sleep(0.5)
             if ( joinedPlayerMoves in {'SX', 'SS'} and lastDealerMove in {'S', 'SS'} ) or (self.player.totalBust() or self.dealer.totalBust()) or\
                 ( 'S' in joinedPlayerMoves and ( self.player.hand.chkBreak() or self.player.spHand.chkBreak() ) ):
                 break
@@ -754,13 +744,13 @@ class Game:
     
     def endgameStr(self):
         if self.winStatus == 'pw':
-            return '*** PLAYER WINS ***'
+            return self.__str__() + '\n\n*** PLAYER WINS ***'
         if self.winStatus == 'dw':
-            return '*** DEALER WINS ***'
+            return self.__str__() + '\n\n*** DEALER WINS ***'
         if self.winStatus == 'draw':
-            return '*** DRAW ***'
+            return self.__str__() + '\n\n*** DRAW ***'
         if self.winStatus == 'n':
-            return '*** ALL BUSTED ***'
+            return self.__str__() + '\n\n*** ALL BUSTED ***'
         print('*** ERROR IN ENDGAMESTR METHOD, INCORRECT WINSTATUS ***')
             
 
@@ -785,8 +775,6 @@ def debug():
         else:
             currentGame.play()
             currentGame.finishGame()
-            clear()
-            print(currentGame)
             print(currentGame.endgameStr())
             input('\n\nPress enter to continue.')
 
@@ -816,13 +804,13 @@ while True:
     else:
         currentGame = Game(None)
         if currentGame.eitherBlackjack():
+            clear()
             print(currentGame.eitherBlackjack())
             currentGame.finishGame()
         else:
             currentGame.play()
             currentGame.finishGame()
             clear()
-            print(currentGame)
             print(currentGame.endgameStr())
     cont = takeInput(('y', 'n'), '\nPlay again? (y/n)\n')
     if cont == 'n':
