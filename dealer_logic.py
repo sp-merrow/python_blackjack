@@ -25,8 +25,7 @@ class LogicTableLookupFailed(Exception):
         self.faces = faces
         self.isSP = isSP
     def __str__(self):
-        return f'decideMove method could not find field.\n\nTraceback info:\nMove received: {self.move}\nPlayer card face: \
-        {self.opponentFace}\nDealer points: {self.myPoints}\nCards in hand: {self.faces}\nDealer split status: {self.isSP}'
+        return f'decideMove method could not find field.\n\nTraceback info:\nMove received: {self.move}\nPlayer card face: {self.opponentFace}\nDealer points: {self.myPoints}\nCards in hand: {self.faces}\nDealer split status: {self.isSP}'
 
 class Logic:
     def __init__(self, pCard, myHand, isSP):
