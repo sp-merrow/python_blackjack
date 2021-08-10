@@ -1,17 +1,18 @@
-from random import randint
-from dealer_logic import Logic
-from os import name, system
-from time import sleep
+from random import randint #used for dealer to pick random bet, also used in Deck object to grab a random card from the deck
+from dealer_logic import Logic #import separate .py file with decision making code for dealer to pick move
+from os import name, system #used for clear lambda function
+from time import sleep #used in play method in class Game when player has stood & dealer is still making moves
+from blackjack_exceptions import * #import all custom exceptions for project
 
 suitSymbols = {'SPADE':'♠', 'CLUB':'♣', 'DIAMOND':'♦', 'HEART':'♥'}
 cardTemplate = []
 betAmounts = {'1':1.00, '2':2.50, '3':5.00, '4':25.00, '5':50.00, '6':100.00, '7':500.00}
 
-with open('card_template.txt', 'r', encoding='utf-8') as ct:
+with open('card_template.txt', 'r', encoding='utf-8') as ct: #reads input file with template for ASCII art card
     for line in ct:
         cardTemplate.append(line.replace('\n', ''))
     
-clear = lambda: system('cls' if name == 'nt' else 'clear')
+clear = lambda: system('cls' if name == 'nt' else 'clear') #used to clear output from console
 
 def takeInput(valids, text): #input validation function
     while True:
@@ -21,13 +22,13 @@ def takeInput(valids, text): #input validation function
         else:
             return choice
 
-def findKey(searchVal, testDict):
+def findKey(searchVal, testDict): #used in finishGame method in class Game 
     for k, v in testDict.items():
         if v == searchVal:
             return k
 
 class Card:
-    def __init__(self, suit, face, isFlipped):
+    def __init__(self, suit, face, isFlipped): #constructor
         self.suit = suit
         self.face = face
         self.isFlipped = isFlipped
@@ -38,7 +39,7 @@ class Card:
         else:
             self.points = int(self.face)
 
-    def __str__(self):
+    def __str__(self): #returns visual representation of card
         if self.isFlipped:
             return self.flippedCard()
         fullCard = ''
@@ -58,7 +59,7 @@ class Card:
                 fullCard += '\n' + line
         return fullCard
     
-    def flippedCard(self):
+    def flippedCard(self): #returns visual representation of a face down card
         fullCard = ''
         for count, line in enumerate(cardTemplate):
             line = line.replace('F', '▒')
@@ -70,35 +71,33 @@ class Card:
                 fullCard += '\n' + line
         return fullCard
 
-class improperDeck(Exception):
-    def __str__(self):
-        return 'Deck not properly initialized.'
-
-class ForcedCardNotFound(Exception):
-    def __str__(self):
-        return 'forceDraw method in class Deck could not find requested cards.'
-
 class Deck(list):
-    def shuffle(self):
+    def __init__(self): #constructor, in this case used to read the input file and populate the default, full deck
+        self.defaultDeck = []
         with open('cards.txt', 'r') as d:
             for c in d:
                 c = c.replace('\n', '')
                 c = c.split('|')
-                self.append(Card(c[1], c[2], False))
+                self.defaultDeck.append(Card(c[1], c[2], False))
+
+    def shuffle(self): #clears all remaining cards from self and loads in default deck
+        self.clear()
+        for i in self.defaultDeck:
+            self.append(i)
     
-    def getRandom(self):
+    def getRandom(self): #removes a card from self and then returns said card
         try:
             return self.pop(randint(0, (len(self)-1)))
         except:
             raise improperDeck
     
-    def forceDraw(self, forcedFace):
+    def forceDraw(self, forcedFace): #used by debug mode, used to draw a card with a specified face
         for c, card in enumerate(self):
             if card.face == forcedFace:
                 return self.pop(c)
-        raise ForcedCardNotFound
+        raise forcedCardNotFound
     
-    def getSplit(self):
+    def getSplit(self): #pulls random pairs of cards until it pulls 2 cards with the same face, then returns pair
         while True:
             split = []
             for i in range(2):
@@ -107,7 +106,7 @@ class Deck(list):
             if split[0][1].face == split[1][1].face:
                 return [i[1] for i in split]
     
-    def getDouble(self):
+    def getDouble(self): #pulls random pairs of cards until it pulls 2 cards that meet the criteria to double down, then returns pair
         while True:
             double = []
             for i in range(2):
@@ -117,10 +116,10 @@ class Deck(list):
                 return [i[1] for i in double]
 
 
-deck = Deck()
+deck = Deck() #initializes deck object
 
 class Hand(list):
-    def __init__(self, isDealer, splitCard, bet, isCopy, debugHand):
+    def __init__(self, isDealer, splitCard, bet, isCopy, debugHand): #constructor
         self.points = 0
         self.isDealer = isDealer
         self.bet = bet
@@ -145,7 +144,7 @@ class Hand(list):
         else:
             self.debugMode = False
 
-    def newHand(self):
+    def newHand(self): #called to deal 2 cards when new hand created (unless this is a debug hand or a copy)
         for i in range(2):
             self.append(deck.getRandom())
         if self.isDealer: #if this is the dealer's hand, show only one card face up
@@ -153,14 +152,14 @@ class Hand(list):
         for card in self:
             self.points += card.points
     
-    def makeCopy(self):
+    def makeCopy(self): #generates and returns a copy of the hand object, used by chkBreak method so it won't need to actually change hand points
         handCopy = Hand(self.isDealer, None, self.bet, True, None)
         for c in self:
             handCopy.append(c)
             handCopy.points += c.points
         return handCopy
 
-    def endRound(self, won):
+    def endRound(self, won): #resolves payout at end of game
         if self.isDealer:
             if won == 'W':
                 Dealer.cash += self.bet * 2
@@ -176,7 +175,7 @@ class Hand(list):
             if won == 'D':
                 Player.cash += self.bet
     
-    def doubleDown(self):
+    def doubleDown(self): #doubles the bet on the hand, also subtracts additional bet from balance
         if not self.hasDoubled:
             self.hasDoubled = True
             if self.isDealer:
@@ -185,13 +184,13 @@ class Hand(list):
                 Player.cash -= self.bet
             self.bet *= 2
 
-    def hasAce(self):
+    def hasAce(self): #returns true if hand contains 1 or more aces, otherwise returns false
         aceList = [i for i in self if i.face == 'A']
         if aceList:
             return True
         return False
 
-    def chkBreak(self):
+    def chkBreak(self): #returns a boolean representing if hand is bust, takes soft values from aces into account
         testList = self.makeCopy()
         aceList = [i for i in self if i.face == 'A']
         if self.hasAce():
@@ -207,13 +206,13 @@ class Hand(list):
             return True
         return False
     
-    def changeAce(self): # possibly unneeded, will delete when program finished if not utilized
+    def changeAce(self): #if there is a bust, reduces ace(s) point values in hand from 11 to 1 until bust resolved or out of aces
         aceList = [i for i in self if i.face == 'A']
         for a in aceList:
             if self.points > 21:
                 self.points -= 10
             else:
-                return
+                return #prevents unnecessary looping
 
     def chkDouble(self):
         if ( self.points in range(9, 12) ) and len(self) == 2 and not self.hasDoubled:
@@ -231,7 +230,7 @@ class Hand(list):
         if self.points == 21 and len(self) == 2:
             return True
         if self.points == 21 and len(self) != 2:
-            print('*** CHKBLACKJACK METHOD IMPROPERLY INVOKED ***')
+            raise chkBlackjackError
         return False
 
     def hit(self):
@@ -261,7 +260,7 @@ class Hand(list):
 
 class Dealer:
     cash = 500
-    def __init__(self, pCard):
+    def __init__(self, pCard): #constructor
         self.originalBet = betAmounts[str(randint(1, 6))]
         self.hand = Hand(True, None, self.originalBet, False, None)
         self.pCard = pCard
@@ -269,20 +268,29 @@ class Dealer:
         self.splitAce = False
         Dealer.cash -= self.originalBet
     
-    def __str__(self):
+    def __str__(self): #__str__ method for printing dealer's hand
         if not self.isSplit:
             return self.hand.__str__()
         else:
             tempAdd = []
             fullHand = ''
-            for handCount, h in enumerate([self.hand, self.spHand]):
+            hands = [self.hand, self.spHand]
+            for handCount, h in enumerate(hands):
                 for count, card in enumerate(h):
-                    for lineCount, line in enumerate(card.__str__().split('\n')):
-                        if count == 0:
-                            tempAdd.append(line + '\n')
-                        elif handCount > 0:
-                            editLine = tempAdd[lineCount]
-                            editLine = editLine.replace('\n', '\t' + line + '\n')
+                    cardLines = card.__str__().split('\n')
+                    for lineCount, line in enumerate(cardLines):
+                        if handCount == 0:
+                            if count == 0 and len(h) == 1:
+                                tempAdd.append(line + '\t\t\n')
+                            elif count == 0 and len(h) != 1:
+                                tempAdd.append(line + ' \n')
+                            else:
+                                editLine = tempAdd[lineCount]
+                                if count == len(h) - 1:
+                                    editLine = editLine.replace('\n', ' ' + line + '\t\t\n')
+                                else:
+                                    editLine = editLine.replace('\n', ' ' + line + '\n')
+                                tempAdd[lineCount] = editLine
                         else:
                             editLine = tempAdd[lineCount]
                             editLine = editLine.replace('\n', ' ' + line + '\n')
@@ -293,19 +301,19 @@ class Dealer:
             
             return fullHand
 
-    def split(self): #splits hand
+    def split(self): #splits dealer's hand if allowed, raises exception if split is attempted when not allowed
         if self.hand.chkSplit() and not self.isSplit:
-            if self.hand[0] == 'A' and self.hand[1] == 'A':
+            if self.hand[0].face == 'A' and self.hand[1].face == 'A':
                 self.splitAce = True
             self.spHand = Hand(True, self.hand.pop(), self.originalBet, False, None)
             self.isSplit = True
             Dealer.cash -= self.originalBet
         elif not self.hand.chkSplit() and not self.isSplit:
-            print('*** DEALER PERFORMED ILLEGAL SPLIT, NOT ALLOWED BY CHKSPLIT ***')
+            raise illegalSplit('c')
         elif self.hand.chkSplit() and self.isSplit:
-            print('*** DEALER PERFORMED ILLEGAL SPLIT, ALREADY SPLIT ***')
+            raise illegalSplit('a')
         else:
-            print('*** DEALER PERFORMED ILLEGAL SPLIT, ALREADY SPLIT AND NOT ALLOWED BY CHKSPLIT ***')
+            raise illegalSplit('b')
 
     
     def parseMove(self, move, currentHand): #used by play method, takes move from dealer_logic and performs it
@@ -318,7 +326,7 @@ class Dealer:
         elif move == 'SP':
             self.split()
         else:
-            print(f'*** PARSEMOVE RECEIVED INVALID MOVE ***\nMove that was received: {move}')
+            raise parseMoveError(move)
 
     def totalBust(self): #returns true if all dealer's hands have busted, else false
         if self.isSplit:
@@ -335,14 +343,19 @@ class Dealer:
         for c in self.hand:
             c.isFlipped = False
     
-    def anyDouble(self):
+    def anyDouble(self): #returns boolean representing if dealer has doubled down on any hand
         if self.isSplit:
             return self.hand.hasDoubled or self.spHand.hasDoubled
         return self.hand.hasDoubled
 
-    def play(self):
+    def play(self): #main method dealer uses to play turn, calls class from dealer_logic.py to decide move if needed
         returnStr = []
-        if not self.anyDouble() and not self.splitAce: #if dealer has not doubled down, and has not split aces
+        if self.hand.points == 21 or self.isSplit and self.spHand.points == 21:
+            if self.hand.points == 21:
+                returnStr.append('S')
+            if self.isSplit and self.spHand.points == 21:
+                returnStr.append('S')
+        elif not self.anyDouble() and not self.splitAce: #if dealer has not doubled down, and has not split aces
             if self.hand.chkBreak():
                 returnStr.append('S')
             else:
@@ -363,13 +376,13 @@ class Dealer:
                     self.parseMove(moveTwo, self.spHand)
                     returnStr.append(moveTwo)
         else:
-            if len(self.hand) == 1 and not self.hand.chkBreak():
+            if ( len(self.hand) == 1 and not self.hand.chkBreak() ) or ( len(self.hand) == 2 and self.hand.hasDoubled ):
                 self.hand.hit()
                 returnStr.append('H')
             else:
                 returnStr.append('S')
             if self.isSplit:
-                if len(self.spHand) == 1 and not self.spHand.chkBreak():
+                if ( len(self.spHand) == 1 and not self.spHand.chkBreak() ) or ( len(self.spHand) == 2 and self.spHand.hasDoubled ):
                     self.spHand.hit()
                     returnStr.append('H')
                 else:
@@ -397,16 +410,13 @@ class Player:
                     for i in range(9):
                         if handCount > 0:
                             if i == 3:
-                                newLine = '\t** BUST **\n'
-                            else:
-                                newLine = '\n'
-                            normalLine = tempAdd[i]
-                            tempAdd.append(normalLine.replace('\n', newLine))
+                                normalLine = tempAdd[i]
+                                tempAdd[i] = normalLine.replace('\n', '\t** BUST **\n')
                         else:
                             if i == 3:
-                                tempAdd.append(' ** BUST **     \n')
+                                tempAdd.append(' ** BUST **\t\t\t\n')
                             else:
-                                tempAdd.append('\t\t\n')
+                                tempAdd.append('\t\t\t\t\n')
                 else:
                     for count, card in enumerate(h):
                         cardLines = card.__str__().split('\n')
@@ -443,13 +453,13 @@ class Player:
 
     def split(self):
         if self.hand.chkSplit() and not self.isSplit:
-            if self.hand[0] == 'A' and self.hand[1] == 'A':
+            if self.hand[0].face == 'A' and self.hand[1].face == 'A':
                 self.splitAce = True
             self.spHand = Hand(False, self.hand.pop(), self.originalBet, False, None)
             self.isSplit = True
             Player.cash -= self.originalBet
         else:
-            print('*** PLAYER PERFORMED ILLEGAL SPLIT ***')
+            raise illegalSplit('p')
     
     def anyDouble(self): #returns boolean representing if player has doubled down on any hand
         if self.isSplit:
@@ -459,7 +469,7 @@ class Player:
     def makeBet(self):
         clear()
         if Player.cash <= 0:
-            print('*** MAKEBET INVOKED WITH INVALID PLAYER CASH ***')
+            raise makeBetError
         print(f'Your current cash is ${Player.cash:.2f}')
         betAmt = takeInput(('1', '2', '3', '4', '5', '6', '7'), '\n1. $1.00\n2. $2.50\n3. $5.00\n4. $25.00\n5. $50.00\n6. $100.00\n7. $500.00\n\nEnter bet choice: ')
         while betAmounts[betAmt] > Player.cash:
@@ -556,7 +566,14 @@ class Player:
                         else:
                             returnStr = 'S'
         else:
-            returnStr = 'S'
+            if ( self.isSplit and len(self.hand) == 1 ) or ( len(self.hand) == 2 and self.hand.hasDoubled ):
+                self.hand.hit()
+                returnStr = 'H'
+            elif ( self.isSplit and len(self.spHand) == 1 ) or ( self.isSplit and len(self.spHand) == 2 and self.spHand.hasDoubled ):
+                self.spHand.hit()
+                returnStr = 'H'
+            else:
+                returnStr = 'S'
         return returnStr
             
         
@@ -572,7 +589,7 @@ class Game:
             self.player = Player(None)
             self.debugMode = False
         self.dealer = Dealer(self.player.hand[0])
-        self.winStatus = None
+        self.winStatus = {'player' : [], 'dealer' : []}
     
     def __str__(self):
         if not self.dealer.isSplit and not self.player.isSplit:
@@ -622,10 +639,10 @@ class Game:
             joinedPlayerMoves = lastPlayerMove + lastPlayerSPcard
             if lastDealerMove not in {'S', 'SS'} and joinedPlayerMoves in {'SX', 'SS'} and not self.player.totalBust():
                 while lastDealerMove not in {'S', 'SS'} and not self.dealer.totalBust():
+                    sleep(0.4)
                     lastDealerMove = self.dealer.play()
                     clear()
                     print(self)
-                    sleep(0.5)
             if ( joinedPlayerMoves in {'SX', 'SS'} and lastDealerMove in {'S', 'SS'} ) or (self.player.totalBust() or self.dealer.totalBust()) or\
                 ( 'S' in joinedPlayerMoves and ( self.player.hand.chkBreak() or self.player.spHand.chkBreak() ) ):
                 return
@@ -634,6 +651,10 @@ class Game:
         self.dealer.showCards()
         playerResults = []
         dealerResults = []
+        def addResult(result):
+            self.winStatus['player'].append(result)
+            self.winStatus['dealer'].append(result)
+
         if 'YOU' in self.eitherBlackjack():
             self.player.hand.endRound('B')
         elif 'DEALER' in self.eitherBlackjack():
@@ -655,109 +676,98 @@ class Game:
             pVals = list(pScores.values())
             dVals = list(dScores.values())
 
-            def pointChk(): #used 3 inner functions because these snippets of code were used more than once
-                if bestP > bestD:
-                    playerResults[findKey(bestP, pScores)].endRound('W')
-                    self.winStatus = 'pw'
-                elif bestP == bestD:
-                    playerResults[findKey(bestP, pScores)].endRound('D')
-                    dealerResults[findKey(bestD, dScores)].endRound('D')
-                    self.winStatus = 'draw'
-                else:
-                    dealerResults[findKey(bestD, dScores)].endRound('W')
-                    self.winStatus = 'dw'
-                
-            def samePlayerPointChk(): #see pointChk comment
-                if bestP > bestD:
-                    self.player.hand.endRound('W')
-                    self.player.spHand.endRound('w')
-                    self.winStatus = 'pw'
-                elif bestP == bestD:
-                    self.player.hand.endRound('D')
-                    self.player.spHand.endRound('D')
-                    dealerResults[findKey(bestD, dScores)].endRound('D')
-                    self.winStatus = 'draw'
-                else:
-                    dealerResults[findKey(bestD, dScores)].endRound('W')
-                    self.winStatus = 'dw'
+            def moreP(): #used 3 inner functions because these snippets of code were used more than once
+                for k, v in pScores.items():
+                    if v > bestD:
+                        playerResults[k].endRound('W')
+                        addResult('pw')
+                    elif v == bestD:
+                        playerResults[k].endRound('D')
+                        dealerResults[0].endRound('D')
+                        addResult('draw')
+                    else:
+                        dealerResults[0].endRound('W')
+                        addResult('dw')
 
-            def sameDealerPointChk(): #see pointChk comment
-                if bestD > bestP:
-                    self.dealer.hand.endRound('W')
-                    self.dealer.spHand.endRound('W')
-                    self.winStatus = 'dw'
-                elif bestD == bestP:
-                    self.dealer.hand.endRound('D')
-                    self.dealer.spHand.endRound('D')
-                    playerResults[findKey(bestP, pScores)].endRound('D')
-                    self.winStatus = 'draw'
-                else:
-                    playerResults[findKey(bestP, pScores)].endRound('W')
-                    self.winStatus = 'pw'
+            def moreD(): #see pointChk comment
+                for k, v in dScores.items():
+                    if v > bestP:
+                        dealerResults[k].endRound('W')
+                        addResult('dw')
+                    elif v == bestP:
+                        playerResults[0].endRound('D')
+                        dealerResults[k].endRound('D')
+                        addResult('draw')
+                    else:
+                        playerResults[0].endRound('W')
+                        addResult('pw')
+
+            def bothSplit(): #see pointChk comment
+                for (pk, pv), (dk, dv) in zip(pScores.items(), dScores.items()):
+                    if pv > dv:
+                        playerResults[pk].endRound('W')
+                        addResult('pw')
+                    elif pv == dv:
+                        playerResults[pk].endRound('D')
+                        dealerResults[dk].endRound('D')
+                        addResult('draw')
+                    else:
+                        dealerResults[dk].endRound('W')
+                        addResult('dw')
 
             if len(playerResults) == 1 and len(dealerResults) == 1:
-                pointChk()
+                if bestP > bestD:
+                    playerResults[0].endRound('W')
+                    addResult('pw')
+                elif bestP == bestD:
+                    playerResults[0].endRound('D')
+                    dealerResults[0].endRound('D')
+                    addResult('draw')
+                else:
+                    dealerResults[0].endRound('W')
+                    addResult('dw')
             elif len(playerResults) > len(dealerResults):
-                if pVals[0] != pVals[1]:
-                    pointChk()
-                else:
-                    samePlayerPointChk()
+                moreP()
             elif len(playerResults) < len(dealerResults):
-                if dVals[0] != dVals[1]:
-                    pointChk()
-                else:
-                    sameDealerPointChk()
+                moreD()
             else:
-                if (pVals[0] != pVals[1]) and (dVals[0] != dVals[1]):
-                    pointChk()
-                elif (pVals[0] == pVals[1]) and (dVals[0] != dVals[1]):
-                    samePlayerPointChk()
-                elif (pVals[0] != pVals[1]) and (dVals[0] == dVals[1]):
-                    sameDealerPointChk()
-                else:
-                    if bestP > bestD:
-                        self.player.hand.endRound('W')
-                        self.player.spHand.endRound('W')
-                        self.winStatus = 'pw'
-                    elif bestP < bestD:
-                        self.dealer.hand.endRound('W')
-                        self.dealer.spHand.endRound('W')
-                        self.winStatus = 'dw'
-                    else:
-                        self.dealer.hand.endRound('D')
-                        self.dealer.spHand.endRound('D')
-                        self.player.hand.endRound('D')
-                        self.player.spHand.endRound('D')
-                        self.winStatus = 'draw'
+                bothSplit()
         elif self.player.totalBust() and not self.dealer.totalBust():
-            self.winStatus = 'dw'
-            if self.dealer.isSplit:
-                if not self.dealer.spHand.chkBreak():
-                    self.dealer.spHand.endRound('W')
-            if not self.dealer.hand.chkBreak():
-                self.dealer.hand.endRound('W')
+            addResult('dw')
+            for i in dealerResults:
+                if not i.chkBreak():
+                    i.endRound('W')
         elif self.dealer.totalBust() and not self.player.totalBust():
-            self.winStatus = 'pw'
-            if self.player.isSplit:
-                if not self.player.spHand.chkBreak():
-                    self.player.spHand.endRound('W')
-            if not self.player.hand.chkBreak():
-                self.player.hand.endRound('W')
+            addResult('pw')
+            for i in playerResults:
+                if not i.chkBreak():
+                    i.endRound('W')
         elif self.player.totalBust() and self.dealer.totalBust():
-            self.winStatus = 'n'
+            addResult('n')
         else:
-            print('*** ERROR IN FINISHGAME METHOD, ALL GAME STATES EXHAUSTED ***')
+            raise finishGameError
     
     def endgameStr(self):
-        if self.winStatus == 'pw':
+        pWinValues = {'pw' : 3, 'draw' : 2, 'n' : 1, 'dw' : 0}
+        dWinvalues = {'dw' : 3, 'draw' : 2, 'n' : 1, 'pw' : 0}
+
+        playerVal, dealerVal = 0, 0
+        for i in self.winStatus['player']:
+            if pWinValues[i] >= playerVal:
+                playerVal = pWinValues[i]
+        for i in self.winStatus['dealer']:
+            if dWinvalues[i] >= dealerVal:
+                dealerVal = dWinvalues[i]
+
+        if playerVal > dealerVal:
             return self.__str__() + '\n\n*** PLAYER WINS ***'
-        if self.winStatus == 'dw':
+        if dealerVal > playerVal:
             return self.__str__() + '\n\n*** DEALER WINS ***'
-        if self.winStatus == 'draw':
+        if all(v == 2 for v in {playerVal, dealerVal}):
             return self.__str__() + '\n\n*** DRAW ***'
-        if self.winStatus == 'n':
+        if all(v == 1 for v in {playerVal, dealerVal}):
             return self.__str__() + '\n\n*** ALL BUSTED ***'
-        print('*** ERROR IN ENDGAMESTR METHOD, INCORRECT WINSTATUS ***')
+        raise winStatusError(self.winStatus['player'])
             
 
 def debug():
