@@ -651,6 +651,7 @@ class Game:
         self.dealer.showCards()
         playerResults = []
         dealerResults = []
+
         def addResult(result):
             self.winStatus['player'].append(result)
             self.winStatus['dealer'].append(result)
@@ -676,45 +677,6 @@ class Game:
             pVals = list(pScores.values())
             dVals = list(dScores.values())
 
-            def moreP(): #used 3 inner functions because these snippets of code were used more than once
-                for k, v in pScores.items():
-                    if v > bestD:
-                        playerResults[k].endRound('W')
-                        addResult('pw')
-                    elif v == bestD:
-                        playerResults[k].endRound('D')
-                        dealerResults[0].endRound('D')
-                        addResult('draw')
-                    else:
-                        dealerResults[0].endRound('W')
-                        addResult('dw')
-
-            def moreD(): #see pointChk comment
-                for k, v in dScores.items():
-                    if v > bestP:
-                        dealerResults[k].endRound('W')
-                        addResult('dw')
-                    elif v == bestP:
-                        playerResults[0].endRound('D')
-                        dealerResults[k].endRound('D')
-                        addResult('draw')
-                    else:
-                        playerResults[0].endRound('W')
-                        addResult('pw')
-
-            def bothSplit(): #see pointChk comment
-                for (pk, pv), (dk, dv) in zip(pScores.items(), dScores.items()):
-                    if pv > dv:
-                        playerResults[pk].endRound('W')
-                        addResult('pw')
-                    elif pv == dv:
-                        playerResults[pk].endRound('D')
-                        dealerResults[dk].endRound('D')
-                        addResult('draw')
-                    else:
-                        dealerResults[dk].endRound('W')
-                        addResult('dw')
-
             if len(playerResults) == 1 and len(dealerResults) == 1:
                 if bestP > bestD:
                     playerResults[0].endRound('W')
@@ -727,11 +689,41 @@ class Game:
                     dealerResults[0].endRound('W')
                     addResult('dw')
             elif len(playerResults) > len(dealerResults):
-                moreP()
+                for k, v in pScores.items():
+                    if v > bestD:
+                        playerResults[k].endRound('W')
+                        addResult('pw')
+                    elif v == bestD:
+                        playerResults[k].endRound('D')
+                        dealerResults[0].endRound('D')
+                        addResult('draw')
+                    else:
+                        dealerResults[0].endRound('W')
+                        addResult('dw')
             elif len(playerResults) < len(dealerResults):
-                moreD()
+                for k, v in dScores.items():
+                    if v > bestP:
+                        dealerResults[k].endRound('W')
+                        addResult('dw')
+                    elif v == bestP:
+                        playerResults[0].endRound('D')
+                        dealerResults[k].endRound('D')
+                        addResult('draw')
+                    else:
+                        playerResults[0].endRound('W')
+                        addResult('pw')
             else:
-                bothSplit()
+                for (pk, pv), (dk, dv) in zip(pScores.items(), dScores.items()):
+                    if pv > dv:
+                        playerResults[pk].endRound('W')
+                        addResult('pw')
+                    elif pv == dv:
+                        playerResults[pk].endRound('D')
+                        dealerResults[dk].endRound('D')
+                        addResult('draw')
+                    else:
+                        dealerResults[dk].endRound('W')
+                        addResult('dw')
         elif self.player.totalBust() and not self.dealer.totalBust():
             addResult('dw')
             for i in dealerResults:
@@ -759,14 +751,27 @@ class Game:
             if dWinvalues[i] >= dealerVal:
                 dealerVal = dWinvalues[i]
 
+        baseReturn = self.__str__()
         if playerVal > dealerVal:
-            return self.__str__() + '\n\n*** PLAYER WINS ***'
+            baseReturn += '\n\n*** PLAYER WINS ***'
+            if self.debugMode:
+                baseReturn += f'\n\nWin values: {self.winStatus["player"]}'
+            return baseReturn
         if dealerVal > playerVal:
-            return self.__str__() + '\n\n*** DEALER WINS ***'
+            baseReturn += '\n\n*** DEALER WINS ***'
+            if self.debugMode:
+                baseReturn += f'\n\nWin values: {self.winStatus["dealer"]}'
+            return baseReturn
         if all(v == 2 for v in {playerVal, dealerVal}):
-            return self.__str__() + '\n\n*** DRAW ***'
+            baseReturn += '\n\n*** DRAW ***'
+            if self.debugMode:
+                baseReturn += f'\n\nWin values: {self.winStatus["player"]}'
+            return baseReturn
         if all(v == 1 for v in {playerVal, dealerVal}):
-            return self.__str__() + '\n\n*** ALL BUSTED ***'
+            baseReturn += '\n\n*** ALL BUSTED ***'
+            if self.debugMode:
+                baseReturn += f'\n\nWin values: {self.winStatus["player"]}'
+            return baseReturn
         raise winStatusError(self.winStatus['player'])
             
 
@@ -774,7 +779,7 @@ def debug():
     while True:
         deck.shuffle()
         clear()
-        choice = input('\n\nDebug Menu\n\n1. Specify dealt hand\n2. Deal condition permitting split\n3. Deal condition permitting double down\n4. Exit and play normal game\n')
+        choice = input('\n\nDebug Menu\n\n1. Specify dealt hand\n2. Deal condition permitting split\n3. Deal condition permitting double down\n4. Play standard round with diagnostic info\n5. Exit and play normal game\n')
         if choice == '1':
             hand = input('Enter hand: ')
             hand = hand.split(',')
@@ -782,6 +787,13 @@ def debug():
             hand = deck.getSplit()
         elif choice == '3':
             hand = deck.getDouble()
+        elif choice == '4':
+            hand = []
+            try:
+                for i in range(2):
+                    hand.append(deck[randint(0, len(deck)-1)])
+            except:
+                raise improperDeck
         else:
             return
         currentGame = Game(hand)
