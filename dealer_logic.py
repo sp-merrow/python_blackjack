@@ -28,7 +28,7 @@ class LogicTableLookupFailed(Exception):
         return f'decideMove method could not find field.\n\nTraceback info:\nMove received: {self.move}\nPlayer card face: {self.opponentFace}\nDealer points: {self.myPoints}\nCards in hand: {self.faces}\nDealer split status: {self.isSP}'
 
 class Logic:
-    def __init__(self, pCard, myHand, isSP):
+    def __init__(self, pCard, myHand, isSP, aceChanged):
         self.pCard = pCard
         if pCard.face in {'J', 'K', 'Q'}:
             self.opponentFace = '10'
@@ -37,12 +37,13 @@ class Logic:
         self.myHand = myHand
         self.myPoints = self.myHand.points
         self.isSP = isSP
+        self.aceChanged = aceChanged
     
     def decideMove(self):
         valLocation = playerLookup.index(self.opponentFace)
         if self.myHand.chkSplit() and not self.isSP:
             lookupType = 'pair'
-        elif self.myHand.hasAce():
+        elif self.myHand.hasAce() and not self.aceChanged:
             lookupType = 'soft'
         else:
             lookupType = 'hard'

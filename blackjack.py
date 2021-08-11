@@ -142,6 +142,9 @@ class Hand(list):
                 else:
                     self.append(deck.forceDraw(i.face))
                     self.points += i.points
+        elif self.isDealer == 'd':
+            self.isDealer = True
+            self.debugMode = True
         else:
             self.debugMode = False
 
@@ -199,14 +202,16 @@ class Hand(list):
         testList = self.makeCopy()
         aceList = [i for i in self if i.face == 'A']
         if self.hasAce():
-            aceList = iter(aceList)
             for a in aceList:
                 if testList.points > 21:
                     testList.points -= 10
                 else:
                     break
-        if self.debugMode and not self.isDealer:
-            print(f'Ace adjusted points (from chkBreak method): {testList.points}')
+        if self.debugMode:
+            if not self.isDealer:
+                print(f'Ace adjusted points for player (from chkBreak method): {testList.points}')
+            else:
+                print(f'Ace adjusted points for dealer (from chkBreak method {testList.points}')
         if testList.points > 21:
             return True
         return False
@@ -263,9 +268,12 @@ class Hand(list):
 
 class Dealer:
     cash = 500
-    def __init__(self, pCard): #constructor
+    def __init__(self, pCard, debug): #constructor
         self.originalBet = betAmounts[str(randint(1, 6))]
-        self.hand = Hand(True, None, self.originalBet, False, None)
+        if debug:
+            self.hand = Hand('d', None, self.originalBet, False, None)
+        else:
+            self.hand = Hand(True, None, self.originalBet, False, None)
         self.pCard = pCard
         self.isSplit = False
         self.splitAce = False
@@ -594,10 +602,11 @@ class Game:
         if debug:
             self.player = Player(debug)
             self.debugMode = True
+            self.dealer = Dealer(self.player.hand[0], True)
         else:
             self.player = Player(None)
             self.debugMode = False
-        self.dealer = Dealer(self.player.hand[0])
+            self.dealer = Dealer(self.player.hand[0], False)
         self.winStatus = {'player' : [], 'dealer' : []}
     
     def __str__(self):
