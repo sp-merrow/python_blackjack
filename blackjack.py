@@ -396,6 +396,10 @@ class Dealer:
 class Player:
     cash = 500
     def __init__(self, debug):
+        if debug:
+            self.debugMode = True
+        else:
+            self.debugMode = False
         self.makeBet()
         self.hand = Hand(False, None, self.originalBet, False, debug)
         self.isSplit = False
@@ -470,7 +474,8 @@ class Player:
         return self.hand.hasDoubled
     
     def makeBet(self):
-        clear()
+        if not self.debugMode:
+            clear()
         if Player.cash <= 0:
             raise makeBetError
         print(f'Your current cash is ${Player.cash:.2f}')
@@ -656,7 +661,18 @@ class Game:
         playerResults = []
         dealerResults = []
 
-        def addResult(result):
+        if self.player.isSplit and not self.player.spHand.chkBreak():
+            self.player.spHand.changeAce()
+            playerResults.append(self.player.spHand)
+        if not self.player.hand.chkBreak():
+            self.player.hand.changeAce()
+            playerResults.append(self.player.hand)
+        if self.dealer.isSplit and not self.dealer.spHand.chkBreak():
+            dealerResults.append(self.dealer.spHand)
+        if not self.dealer.hand.chkBreak():
+            dealerResults.append(self.dealer.hand)
+
+        def addResult(result): #used to add wins, losses, and draws to player and dealer
             if result == 'pw':
                 self.winStatus['player'].append('w')
                 self.winStatus['dealer'].append('l')
@@ -678,16 +694,6 @@ class Game:
         elif 'DEALER' in self.eitherBlackjack():
             self.dealer.hand.endRound('B')
         elif not self.player.totalBust() and not self.dealer.totalBust():
-            if self.player.isSplit and not self.player.spHand.chkBreak():
-                self.player.spHand.changeAce()
-                playerResults.append(self.player.spHand)
-            if not self.player.hand.chkBreak():
-                self.player.hand.changeAce()
-                playerResults.append(self.player.hand)
-            if self.dealer.isSplit and not self.dealer.spHand.chkBreak():
-                dealerResults.append(self.dealer.spHand)
-            if not self.dealer.hand.chkBreak():
-                dealerResults.append(self.dealer.hand)
             
             pScores = {c : i.points for c, i in enumerate(playerResults)}
             dScores = {c : i.points for c, i in enumerate(dealerResults)}
@@ -788,8 +794,10 @@ class Game:
 
 def debug():
     while True:
+        if Player.cash <= 0:
+            print('Player cash too low, setting to default at 500...')
+            sleep(3)
         deck.shuffle()
-        clear()
         choice = input('\n\nDebug Menu\n\n1. Specify dealt hand\n2. Deal condition permitting split\n3. Deal condition permitting double down\n4. Play standard round with diagnostic info\n5. Exit and play normal game\n')
         if choice == '1':
             hand = input('Enter hand: ')
