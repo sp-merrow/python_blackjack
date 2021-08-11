@@ -223,7 +223,10 @@ class Hand(list):
 
     def chkDouble(self):
         if ( self.points in range(9, 12) ) and len(self) == 2 and not self.hasDoubled:
-            return True
+            if self.isDealer and (Dealer.cash - self.bet) > 0:
+                return True
+            if (Player.cash - self.bet) > 0 and not self.isDealer:
+                return True
         return False
 
     def chkSplit(self):
@@ -332,8 +335,10 @@ class Dealer:
             pass
         elif move == 'H':
             currentHand.hit()
-        elif move == 'D':
+        elif move == 'D' and currentHand.chkDouble():
             currentHand.doubleDown()
+        elif move == 'D' and not currentHand.chkDouble():
+            currentHand.hit()
         elif move == 'SP':
             self.split()
         else:
@@ -681,14 +686,18 @@ class Game:
             self.player.hand.changeAce()
             playerResults.append(self.player.hand)
         if self.dealer.isSplit and not self.dealer.spHand.chkBreak():
+            self.dealer.spHand.changeAce()
             dealerResults.append(self.dealer.spHand)
         if not self.dealer.hand.chkBreak():
+            self.dealer.hand.changeAce()
             dealerResults.append(self.dealer.hand)
 
         pScores = {c : i.points for c, i in enumerate(playerResults)}
         dScores = {c : i.points for c, i in enumerate(dealerResults)}
-        bestP = max(pScores.values())
-        bestD = max(dScores.values())
+        if pScores:
+            bestP = max(pScores.values())
+        if dScores:
+            bestD = max(dScores.values())
 
         if self.debugMode:
             print(f'Player scores are {pScores.values()}\nDealer scores are {dScores.values()}')
@@ -715,7 +724,6 @@ class Game:
         elif 'DEALER' in self.eitherBlackjack():
             self.dealer.hand.endRound('B')
         elif not self.player.totalBust() and not self.dealer.totalBust():
-            
             wins = []
             if len(playerResults) > len(dealerResults):
                 for k, v in pScores.items():
