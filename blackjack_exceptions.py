@@ -6,9 +6,13 @@ class forcedCardNotFound(Exception):
     def __str__(self):
         return 'forceDraw method in class Deck could not find requested cards.'
 
-class chkBlackjackError(Exception):
+class endRoundError(Exception):
+    def __init__(self, user, win):
+        self.user = user
+        self.win = win
+
     def __str__(self):
-        return 'chkBlackjack method in class Hand improperly invoked.'
+        return f'endRound method for {self.user} in class Hand was invoked with an invalid win status.\nWin status given: {self.win}'
 
 class illegalSplit(Exception):
     def __init__(self, errorType):
@@ -37,8 +41,15 @@ class makeBetError(Exception):
         return 'makeBet method in class Player invoked with invalid player cash.'
 
 class finishGameError(Exception):
+    def __init__(self, errorType, extra):
+        self.errorType = errorType
+        self.extra = extra
+
     def __str__(self):
-        return 'Error in finishGame method in class Game, all game states exhausted.'
+        if self.errorType == 1:
+            return 'Error in finishGame method in class Game, all game states exhausted.'
+        if self.errorType == 2:
+            return f'Error in addResult function in finishGame method, win status of "{self.extra}" is invalid.'
 
 class winStatusError(Exception):
     def __init__(self, winList):
