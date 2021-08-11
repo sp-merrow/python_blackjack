@@ -22,11 +22,6 @@ def takeInput(valids, text): #input validation function
         else:
             return choice
 
-def findKey(searchVal, testDict): #used in finishGame method in class Game 
-    for k, v in testDict.items():
-        if v == searchVal:
-            return k
-
 class Card:
     def __init__(self, suit, face, isFlipped): #constructor
         self.suit = suit
@@ -218,11 +213,13 @@ class Hand(list):
     
     def changeAce(self): #if there is a bust, reduces ace(s) point values in hand from 11 to 1 until bust resolved or out of aces
         aceList = [i for i in self if i.face == 'A']
+        changed = False
         for a in aceList:
             if self.points > 21:
                 self.points -= 10
-            else:
-                return #prevents unnecessary looping
+                changed = True
+        return changed
+        
 
     def chkDouble(self):
         if ( self.points in range(9, 12) ) and len(self) == 2 and not self.hasDoubled:
@@ -236,8 +233,8 @@ class Hand(list):
                 return True
         return False
 
-    def chkBlackjack(self):
-        if self.points == 21 and len(self) == 2 and not self.splitCard:
+    def chkBlackjack(self, isSplit):
+        if self.points == 21 and len(self) == 2 and not isSplit:
             return True
         return False
 
@@ -315,7 +312,10 @@ class Dealer:
     def split(self): #splits dealer's hand if allowed, raises exception if split is attempted when not allowed
         if self.hand.chkSplit() and not self.isSplit:
             if self.hand[0].face == 'A' and self.hand[1].face == 'A':
+                self.hand.points = 11
                 self.splitAce = True
+            else:
+                self.hand.points /= 2
             self.spHand = Hand(True, self.hand.pop(), self.originalBet, False, None)
             self.isSplit = True
             Dealer.cash -= self.originalBet
@@ -360,6 +360,7 @@ class Dealer:
         return self.hand.hasDoubled
 
     def play(self): #main method dealer uses to play turn, calls class from dealer_logic.py to decide move if needed
+        aceChanged = False
         returnStr = []
         if self.hand.points == 21 or self.isSplit and self.spHand.points == 21:
             if self.hand.points == 21:
@@ -371,8 +372,8 @@ class Dealer:
                 returnStr.append('S')
             else:
                 if self.hand.hasAce:
-                    self.hand.changeAce()
-                mainLogic = Logic(self.pCard, self.hand, self.isSplit)
+                    aceChanged = self.hand.changeAce()
+                mainLogic = Logic(self.pCard, self.hand, self.isSplit, aceChanged)
                 move = mainLogic.decideMove()
                 returnStr.append(move)
                 self.parseMove(move, self.hand)
@@ -381,8 +382,8 @@ class Dealer:
                     returnStr.append('S')
                 else:
                     if self.spHand.hasAce():
-                        self.spHand.changeAce()
-                    logicTwo = Logic(self.pCard, self.spHand, self.isSplit)
+                        aceChanged = self.spHand.changeAce()
+                    logicTwo = Logic(self.pCard, self.spHand, self.isSplit, aceChanged)
                     moveTwo = logicTwo.decideMove()
                     self.parseMove(moveTwo, self.spHand)
                     returnStr.append(moveTwo)
@@ -470,6 +471,9 @@ class Player:
         if self.hand.chkSplit() and not self.isSplit:
             if self.hand[0].face == 'A' and self.hand[1].face == 'A':
                 self.splitAce = True
+                self.hand.points = 11
+            else:
+                self.hand.points /= 2
             self.spHand = Hand(False, self.hand.pop(), self.originalBet, False, None)
             self.isSplit = True
             Player.cash -= self.originalBet
@@ -607,7 +611,7 @@ class Game:
             self.player = Player(None)
             self.debugMode = False
             self.dealer = Dealer(self.player.hand[0], False)
-        self.winStatus = {'player' : [], 'dealer' : []}
+        self.winStatus = {}
     
     def __str__(self):
         if not self.dealer.isSplit and not self.player.isSplit:
@@ -620,10 +624,10 @@ class Game:
             return "   *** Dealer's Hands ***\n" + self.dealer.__str__() + '\n\n   *** Your Hands ***\n' + self.player.__str__()
 
     def eitherBlackjack(self): #made individual method for blackjack case so it can be checked at game start
-        if self.player.hand.chkBlackjack():
+        if self.player.hand.chkBlackjack(self.player.isSplit):
             self.dealer.showCards()
             return self.__str__() + '\n\n*** YOU HAVE BLACKJACK! YOU WIN! ***'
-        elif self.dealer.hand.chkBlackjack():
+        elif self.dealer.hand.chkBlackjack(self.dealer.isSplit):
             self.dealer.showCards()
             return self.__str__() + '\n\n*** DEALER HAS BLACKJACK! DEALER WINS! ***'
         else:
@@ -681,19 +685,27 @@ class Game:
         if not self.dealer.hand.chkBreak():
             dealerResults.append(self.dealer.hand)
 
+        pScores = {c : i.points for c, i in enumerate(playerResults)}
+        dScores = {c : i.points for c, i in enumerate(dealerResults)}
+        bestP = max(pScores.values())
+        bestD = max(dScores.values())
+
+        if self.debugMode:
+            print(f'Player scores are {pScores.values()}\nDealer scores are {dScores.values()}')
+
         def addResult(result): #used to add wins, losses, and draws to player and dealer
             if result == 'pw':
-                self.winStatus['player'].append('w')
-                self.winStatus['dealer'].append('l')
+                self.winStatus['player'] = 'w'
+                self.winStatus['dealer'] = 'l'
             elif result == 'dw':
-                self.winStatus['player'].append('l')
-                self.winStatus['dealer'].append('w')
+                self.winStatus['player'] = 'l'
+                self.winStatus['dealer'] = 'w'
             elif result == 'draw':
-                self.winStatus['player'].append('draw')
-                self.winStatus['dealer'].append('draw')
+                self.winStatus['player'] = 'draw'
+                self.winStatus['dealer'] = 'draw'
             elif result == 'n':
-                self.winStatus['player'].append('l')
-                self.winStatus['dealer'].append('l')
+                self.winStatus['player'] = 'l'
+                self.winStatus['dealer'] = 'l'
             else:
                 raise finishGameError(2, result)
             
@@ -704,12 +716,59 @@ class Game:
             self.dealer.hand.endRound('B')
         elif not self.player.totalBust() and not self.dealer.totalBust():
             
-            pScores = {c : i.points for c, i in enumerate(playerResults)}
-            dScores = {c : i.points for c, i in enumerate(dealerResults)}
-            bestP = max(pScores.values())
-            bestD = max(dScores.values())
-
-            if len(playerResults) == 1 and len(dealerResults) == 1:
+            wins = []
+            if len(playerResults) > len(dealerResults):
+                for k, v in pScores.items():
+                    if v > bestD:
+                        playerResults[k].endRound('W')
+                        wins.append(v)
+                    elif v == bestD:
+                        playerResults[k].endRound('D')
+                        dealerResults[0].endRound('D')
+                        wins.append(v)
+                    else:
+                        dealerResults[0].endRound('W')
+                        wins.append(v)
+                if max(wins) > bestD:
+                    addResult('pw')
+                elif max(wins) == bestD:
+                    addResult('draw')
+                else:
+                    addResult('dw')
+            elif len(playerResults) < len(dealerResults):
+                for k, v in dScores.items():
+                    if v > bestP:
+                        dealerResults[k].endRound('W')
+                        wins.append(v)
+                    elif v == bestP:
+                        playerResults[0].endRound('D')
+                        dealerResults[k].endRound('D')
+                        wins.append(v)
+                    else:
+                        playerResults[0].endRound('W')
+                        wins.append(v)
+                if max(wins) > bestP:
+                    addResult('dw')
+                elif max(wins) == bestP:
+                    addResult('draw')
+                else:
+                    addResult('pw')
+            elif len(playerResults) == 2 and len(dealerResults) == 2:
+                for (pk, pv), (dk, dv) in zip(pScores.items(), dScores.items()):
+                    if pv > dv:
+                        playerResults[pk].endRound('W')
+                    elif pv == dv:
+                        playerResults[pk].endRound('D')
+                        dealerResults[dk].endRound('D')
+                    else:
+                        dealerResults[dk].endRound('W')
+                if bestP > bestD:
+                    addResult('pw')
+                elif bestP == bestD:
+                    addResult('draw')
+                else:
+                    addResult('dw')      
+            else:
                 if bestP > bestD:
                     playerResults[0].endRound('W')
                     addResult('pw')
@@ -720,42 +779,6 @@ class Game:
                 elif bestD > bestP:
                     dealerResults[0].endRound('W')
                     addResult('dw')
-            elif len(playerResults) > len(dealerResults):
-                for k, v in pScores.items():
-                    if v > bestD:
-                        playerResults[k].endRound('W')
-                        addResult('pw')
-                    elif v == bestD:
-                        playerResults[k].endRound('D')
-                        dealerResults[0].endRound('D')
-                        addResult('draw')
-                    elif bestD > v:
-                        dealerResults[0].endRound('W')
-                        addResult('dw')
-            elif len(playerResults) < len(dealerResults):
-                for k, v in dScores.items():
-                    if v > bestP:
-                        dealerResults[k].endRound('W')
-                        addResult('dw')
-                    elif v == bestP:
-                        playerResults[0].endRound('D')
-                        dealerResults[k].endRound('D')
-                        addResult('draw')
-                    elif bestP > v:
-                        playerResults[0].endRound('W')
-                        addResult('pw')
-            else:
-                for (pk, pv), (dk, dv) in zip(pScores.items(), dScores.items()):
-                    if pv > dv:
-                        playerResults[pk].endRound('W')
-                        addResult('pw')
-                    elif pv == dv:
-                        playerResults[pk].endRound('D')
-                        dealerResults[dk].endRound('D')
-                        addResult('draw')
-                    elif dv > pv:
-                        dealerResults[dk].endRound('W')
-                        addResult('dw')
         elif self.player.totalBust() and not self.dealer.totalBust():
             addResult('dw')
             for i in dealerResults:
@@ -774,31 +797,31 @@ class Game:
     def endgameStr(self):
         winValues = {'w' : 2, 'draw' : 1, 'l' : 0}
 
-        playerVal = max([winValues[i] for i in self.winStatus['player']])
-        dealerVal = max([winValues[i] for i in self.winStatus['dealer']])
+        playerVal = winValues[self.winStatus['player']]
+        dealerVal = winValues[self.winStatus['dealer']]
 
         baseReturn = self.__str__()
         if playerVal > dealerVal:
             baseReturn += '\n\n*** PLAYER WINS ***'
             if self.debugMode:
-                baseReturn += f'\n\nWin values: {self.winStatus["player"]}'
+                baseReturn += f'\n\nPlayer win value: {self.winStatus["player"]}\nDealer win value: {self.winStatus["dealer"]}'
             return baseReturn
         if dealerVal > playerVal:
             baseReturn += '\n\n*** DEALER WINS ***'
             if self.debugMode:
-                baseReturn += f'\n\nWin values: {self.winStatus["dealer"]}'
+                baseReturn += f'\n\nPlayer win value: {self.winStatus["player"]}\nDealer win value: {self.winStatus["dealer"]}'
             return baseReturn
         if all(v == 1 for v in {playerVal, dealerVal}):
             baseReturn += '\n\n*** DRAW ***'
             if self.debugMode:
-                baseReturn += f'\n\nWin values: {self.winStatus["player"]}'
+                baseReturn += f'\n\nPlayer win value: {self.winStatus["player"]}\nDealer win value: {self.winStatus["dealer"]}'
             return baseReturn
         if all(v == 0 for v in {playerVal, dealerVal}):
             baseReturn += '\n\n*** ALL BUSTED ***'
             if self.debugMode:
-                baseReturn += f'\n\nWin values: {self.winStatus["player"]}'
+                baseReturn += f'\n\nPlayer win value: {self.winStatus["player"]}\nDealer win value: {self.winStatus["dealer"]}'
             return baseReturn
-        raise winStatusError(self.winStatus['player'])
+        raise winStatusError(self.winStatus['player'], self.winStatus['dealer'])
             
 
 def debug():
