@@ -52,11 +52,14 @@ class finishGameError(Exception):
             return f'Error in addResult function in finishGame method, win status of "{self.extra}" is invalid.'
 
 class winStatusError(Exception):
-    def __init__(self, winList):
-        self.winList = winList
+    def __init__(self, pWinList, dWinList):
+        self.pWinList = pWinList
+        self.dWinList = dWinList
     
     def __str__(self):
-        wins = ''
-        for i in self.winList:
-            wins += '\n' + i
-        return f'Error in endgameStr method in class Game, winStatus received: {wins}'
+        pWins, dWins = '', ''
+        for i in self.pWinList:
+            pWins += '\n' + i
+        for i in self.dWinList:
+            dWins += '\n' + i
+        return f'Error in endgameStr method in class Game.\n\nTraceback info:\nPlayer winStatus received: {pWins}\n\nDealer winStatus received: {dWins}'
