@@ -221,7 +221,7 @@ class Hand(list):
         return changed
         
 
-    def chkDouble(self):
+    def chkDouble(self): #checks if hand can be doubled down, returns boolean
         if ( self.points in range(9, 12) ) and len(self) == 2 and not self.hasDoubled:
             if self.isDealer and (Dealer.cash - self.bet) > 0:
                 return True
@@ -229,26 +229,26 @@ class Hand(list):
                 return True
         return False
 
-    def chkSplit(self):
+    def chkSplit(self): #checks if hand can be split, returns boolean
         if len(self) == 2:
             faces = [i.face for i in self]
             if faces[0] == faces[1]:
                 return True
         return False
 
-    def chkBlackjack(self, isSplit):
+    def chkBlackjack(self, isSplit): #checks if hand has blackjack, returns boolean
         if self.points == 21 and len(self) == 2 and not isSplit:
             return True
         return False
 
-    def hit(self):
+    def hit(self): #main method used to hit. pops a card from deck and adds it to hand
         newCard = deck.getRandom()
         if self.isDealer:
             newCard.isFlipped = True
         self.points += newCard.points
         self.append(newCard)
     
-    def __str__(self):
+    def __str__(self): #str method, returns visual representation of hand
         tempAdd = []
         fullHand = ''
         for count, card in enumerate(self):
@@ -279,7 +279,7 @@ class Dealer:
         self.splitAce = False
         Dealer.cash -= self.originalBet
     
-    def __str__(self): #__str__ method for printing dealer's hand
+    def __str__(self): #__str__ method for printing dealer's hand(s)
         if not self.isSplit:
             return self.hand.__str__()
         else:
@@ -345,10 +345,9 @@ class Dealer:
             raise parseMoveError(move)
 
     def totalBust(self): #returns true if all dealer's hands have busted, else false
-        if self.isSplit:
-            if self.spHand.chkBreak() and self.hand.chkBreak():
-                return True
-        if self.hand.chkBreak():
+        if self.isSplit and self.spHand.chkBreak() and self.hand.chkBreak():
+            return True
+        if self.hand.chkBreak() and not self.isSplit:
             return True
         return False
     
@@ -409,7 +408,7 @@ class Dealer:
 
 class Player:
     cash = 500
-    def __init__(self, debug):
+    def __init__(self, debug): #constructor
         if debug:
             self.debugMode = True
         else:
@@ -419,7 +418,7 @@ class Player:
         self.isSplit = False
         self.splitAce = False
     
-    def __str__(self):
+    def __str__(self): #str method to show player's hand(s)
         if not self.isSplit:
             return self.hand.__str__()
         else:
@@ -464,15 +463,14 @@ class Player:
             
             return fullHand
     
-    def totalBust(self):
-        if self.isSplit:
-            if self.spHand.chkBreak() and self.hand.chkBreak():
-                return True
-        if self.hand.chkBreak():
+    def totalBust(self): #checks if all player's hand(s) have busted, returns boolean
+        if self.isSplit and self.spHand.chkBreak() and self.hand.chkBreak():
+            return True
+        if self.hand.chkBreak() and not self.isSplit:
             return True
         return False
 
-    def split(self):
+    def split(self): #splits player's hand if allowed
         if self.hand.chkSplit() and not self.isSplit:
             if self.hand[0].face == 'A' and self.hand[1].face == 'A':
                 self.splitAce = True
@@ -483,14 +481,14 @@ class Player:
             self.isSplit = True
             Player.cash -= self.originalBet
         else:
-            raise illegalSplit('p')
+            raise illegalSplit('p') #raise exception if obj attempts an illegal split
     
     def anyDouble(self): #returns boolean representing if player has doubled down on any hand
         if self.isSplit:
             return self.hand.hasDoubled or self.spHand.hasDoubled
         return self.hand.hasDoubled
     
-    def makeBet(self):
+    def makeBet(self): #takes player input for bet on hand
         if not self.debugMode:
             clear()
         if Player.cash <= 0:
@@ -505,7 +503,7 @@ class Player:
                 break
         Player.cash -= self.originalBet
 
-    def play(self, spLogic):
+    def play(self, spLogic): #main method for player to take turn
         if not self.anyDouble() and not self.splitAce:
             if not spLogic:
                 if self.hand.chkSplit() and self.hand.chkDouble() and not self.isSplit:
@@ -606,7 +604,7 @@ class Player:
 
 
 class Game:
-    def __init__(self, debug):
+    def __init__(self, debug): #constructor
         deck.shuffle()
         if debug:
             self.player = Player(debug)
@@ -638,7 +636,7 @@ class Game:
         else:
             return ''
 
-    def play(self):
+    def play(self): #main method to play turns, loops until one or both bust, or until both stand
         lastPlayerSPcard = 'X'
         while True: #loops until break condition (if either bust or both stand) at end is met
             if not self.debugMode:
@@ -674,7 +672,7 @@ class Game:
                 ( 'S' in joinedPlayerMoves and ( self.player.hand.chkBreak() or self.player.spHand.chkBreak() ) ):
                 return
 
-    def finishGame(self):
+    def finishGame(self): #used to resolve payouts for bets as well as determine winner
         self.dealer.showCards()
         playerResults = []
         dealerResults = []
@@ -800,9 +798,9 @@ class Game:
         elif self.player.totalBust() and self.dealer.totalBust():
             addResult('n')
         else:
-            raise finishGameError(1, None)
+            raise finishGameError(1, None) #if all possible win conditions are exhausted, raises exception
     
-    def endgameStr(self):
+    def endgameStr(self): #returns string declaring winner
         winValues = {'w' : 2, 'draw' : 1, 'l' : 0}
 
         playerVal = winValues[self.winStatus['player']]
@@ -832,7 +830,7 @@ class Game:
         raise winStatusError(self.winStatus['player'], self.winStatus['dealer'])
             
 
-def debug():
+def debug(): #debug tools used to diagnose issues with specific game conditions, such as splits returning wrong winner
     while True:
         if Player.cash <= 0:
             print('Player cash too low, setting to default at 500...')
@@ -872,7 +870,7 @@ enterDebug = input('Welcome! Press Enter to start.\n')
 if enterDebug == 'debug':
     debug()
 
-while True:
+while True: #used for playing normal games. asks user if they want to play again, loops until user answers no
     if Player.cash == 0:
         clear()
         option = takeInput({'1', '2'}, "You're out of money! Options:\n1. Start over with default cash\n2. Exit\n")
