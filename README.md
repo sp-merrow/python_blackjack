@@ -1,7 +1,7 @@
 Game is now in a fully playable state, I'm fixing bugs as they show up.
 I've fixed the majority of the bugs, and I'm adding additional UI features as I come up with new ideas.
 
-Bug where end of game would show wrong winner if there was a split has hopefully been fixed.
+Known issues: game still sometimes showing incorrect winner when there is a split
 
 This is the biggest programming project that I've undertook thus far by a longshot, and I'm really happy with how it has turned out.
 
