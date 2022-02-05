@@ -1,3 +1,11 @@
+To start the game:
+
+	-Open a command prompt/terminal in the python_blackjack directory
+
+	-To run on Linux or macOS, run the command "python3 blackjack.py"
+
+	-To run on Windows, run the command "py blackjack.py"
+
 Game is now in a fully playable state, I'm fixing bugs as they show up.
 I've fixed the majority of the bugs, and I'm adding additional UI features as I come up with new ideas.
 
