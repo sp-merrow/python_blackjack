@@ -11,6 +11,8 @@ I've fixed the majority of the bugs, and I'm adding additional UI features as I 
 
 Known issues: game still sometimes showing incorrect winner when there is a split
 
+	This issue has been worked on a bit, but it's not perfect.
+
 This is the biggest programming project that I've undertook thus far by a longshot, and I'm really happy with how it has turned out.
 
 To anyone kind enough to sit down and play this for a bit:
